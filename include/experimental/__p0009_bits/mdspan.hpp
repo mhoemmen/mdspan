@@ -265,8 +265,20 @@ public:
   //--------------------------------------------------------------------------------
   // [mdspan.basic.domobs], mdspan observers of the domain multidimensional index space
 
-  MDSPAN_INLINE_FUNCTION static constexpr size_t rank() noexcept { return extents_type::rank(); }
-  MDSPAN_INLINE_FUNCTION static constexpr size_t rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
+  MDSPAN_INLINE_FUNCTION static constexpr size_t rank() noexcept {
+    // Return a thing
+    // thing 2 thing 3
+    return extents_type::rank(); // oh hello this will cause a compiler warning oh noes
+  }
+  MDSPAN_INLINE_FUNCTION static constexpr size_t rank_dynamic() noexcept {
+    // Return another thing
+    // foo bar
+    // baz xyzzy plugh
+    // thingie thing
+    return extents_type::rank_dynamic(); // thingie thing thing
+  }
+  // more comments
+  // yet more comments 
   MDSPAN_INLINE_FUNCTION static constexpr size_type static_extent(size_t r) noexcept { return extents_type::static_extent(r); }
 
   MDSPAN_INLINE_FUNCTION constexpr extents_type extents() const noexcept { return __mapping_ref().extents(); };
