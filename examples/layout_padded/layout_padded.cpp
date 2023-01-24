@@ -48,10 +48,15 @@
 #include <type_traits>
 #include <vector>
 
+#if defined(__cpp_conditional_explicit) && __cpp_conditional_explicit >= 201806L
+#define P2642_CONDITIONAL_EXPLICIT( the_condition ) explicit( the_condition )
+#else
+#define P2642_CONDITIONAL_EXPLICIT( the_condition )
+#endif
+
 namespace stdex = std::experimental;
 
 namespace details {
-
   // offset_index_sequence idea comes from "offset_sequence" here:
   // https://devblogs.microsoft.com/oldnewthing/20200625-00/?p=103903
   //
@@ -422,6 +427,63 @@ namespace details {
     return PaddingExtentsType{};
   }
 
+  template<class X, class Y>
+  MDSPAN_INLINE_FUNCTION constexpr auto
+  least_multiple_of_x_greater_than_or_equal_to_y(X x, Y y)
+  {
+    if (x >= y) {
+      return x;
+    }
+    else if (x == 0) {
+      // FIXME (mfh 2023/01/16) Perhaps the spec needs
+      // fixing for this case.  It's not clear what to do.
+      return x;
+    }
+    else {
+      constexpr auto quotient = y / x;
+      const bool remainder_is_zero = quotient * x == y;
+      return y + (remainder_is_zero ? 0 : x);
+    }
+  }
+  
+  template<class ExtentsType, std::size_t padding_stride>
+  MDSPAN_INLINE_FUNCTION constexpr std::size_t
+  get_actual_padding_stride()
+  {
+    using index_type = typename ExtentsType::index_type;
+    constexpr auto dyn = std::experimental::dynamic_extent;
+    
+    constexpr auto rank = ExtentsType::rank();
+    if constexpr (rank == 0 || rank == std::size_t(1)) {
+      return padding_stride;
+    }
+    else if constexpr (padding_stride != dyn &&
+                       ExtentsType::static_extent(0) != dyn) {
+      // Least multiple of padding_stride
+      // that is >= ExtentsType::static_extent(0).
+      if constexpr (padding_stride >= ExtentsType::static_extent(0)) {
+        return padding_stride;
+      }
+      else if constexpr (padding_stride == 0) {
+        // FIXME (mfh 2023/01/16) Perhaps the spec needs
+        // fixing for this case.  It's not clear what to do.
+        return padding_stride;
+      }
+      else if constexpr (ExtentsType::static_extent(0)) {
+        // FIXME (mfh 2023/01/16) Perhaps the spec needs
+        // fixing for this case.  It's not clear what to do.
+        return padding_stride;
+      }
+      else {
+        return least_multiple_of_x_greater_than_or_equal_to_y(
+          padding_stride, ExtentsType::static_extent(0));
+      }
+    }
+    else {
+      return dyn;
+    }
+  }
+
 } // namespace details
 
 // TODO (mfh 2022/08/30) Private inheritance from layout_left::mapping
@@ -461,6 +523,9 @@ struct layout_left_padded {
     using layout_type = layout_left_padded<padding_stride>;
 
   private:
+    static constexpr size_t actual_padding_stride =
+      get_actual_padding_stride<extents_type, padding_stride>();
+    
     using padding_extents_type =
       stdex::extents<index_type, padding_stride>;
     using inner_layout_type = stdex::layout_left;
@@ -483,8 +548,49 @@ struct layout_left_padded {
         inner_mapping_,
 	std::integral_constant<std::size_t, extents_type::rank()>{});
     }
+    static constexpr std::size_t dyn = std::experimental::dynamic_extent;
 
   public:
+    // >= 201907L is for constraints in general.
+    // >= 202002L is for "conditionally trivial special member functions"
+    // (P0848R3), which requires GCC 10, Clang 16, MSVC 19.28, and NVCC 12.
+#if defined(__cpp_concepts) && __cpp_concepts >= 202002L
+    MDSPAN_INLINE_FUNCTION_DEFAULTED
+    constexpr mapping()
+    requires(actual_padding_stride != dyn) noexcept = default;
+
+    MDSPAN_INLINE_FUNCTION    
+    constexpr mapping()
+      requires(actual_padding_stride == dyn) noexcept :
+      mapping(extents_type{})
+    {}
+#else
+    // Without the feature added by P0848R3 to C++20,
+    // the only way to constrain the default constructor for
+    // actual_padding_stride == dynamic_extent
+    // would be through a complicated inheritance work-around.
+    // (See P0848R0 for an example.)
+    // Since we're proposing layout_{left,right}_padded for C++26,
+    // we're not obligated to back-port full functionality.
+    // Furthermore, the inheritance work-around would obscure
+    // the reference implementation, which needs to be readable.
+    // We've chosen instead to make the class
+    // not trivially constructible in this case.
+    MDSPAN_INLINE_FUNCTION    
+    constexpr mapping() : mapping(extents_type{}) {}
+#endif
+
+    // layout_left_padded::mapping, just like layout_stride::mapping,
+    // deliberately only defines the copy constructor and copy
+    // assignment operator, not the move constructor or move
+    // assignment operator.  This is fine because all the storage is
+    // std::array-like; there's no advantage to move construction or
+    // move assignment.
+    MDSPAN_INLINE_FUNCTION_DEFAULTED
+    constexpr mapping(const mapping&) noexcept = default;
+    MDSPAN_INLINE_FUNCTION_DEFAULTED
+    constexpr mapping& operator=(const mapping&) noexcept = default;
+    
     // mapping constructor that takes ONLY an extents_type.
     //
     // This constructor makes it possible to construct an mdspan
@@ -496,7 +602,10 @@ struct layout_left_padded {
         ext,
 	padding_extents_type{padding_stride})),
       unpadded_extent_(details::unpadded_extent_left(ext))
-    {}
+    {
+
+
+    }
 
     // mapping constructor that takes an extents_type,
     // AND an integral padding_value.
@@ -520,45 +629,96 @@ struct layout_left_padded {
       // padding_extents_type constructor already has a precondition.
     }
 
-    // Pass in the padding as an extents object.
+    template<class OtherExtents>
     MDSPAN_INLINE_FUNCTION constexpr
-    mapping(const extents_type& ext,
-	    const stdex::extents<index_type, padding_stride>& padding_extents) :
-      inner_mapping_(details::pad_extents_left(ext, padding_extents)),
-      unpadded_extent_(details::unpadded_extent_left(ext))
-    {}
+    P2642_CONDITIONAL_EXPLICIT((
+      ! std::is_convertible_v<OtherExtents, extents_type>
+    ))
+    mapping(const std::experimental::layout_left::mapping<OtherExtents>& other) :
+      inner_mapping_(details::pad_extents_left(
+        other.extents(),
+	padding_extents_type{padding_stride})),
+      unpadded_extent_(details::unpadded_extent_left(other.extents()))
+    {
+      using other_index_type = typename OtherExtents::index_type;
+      constexpr auto other_rank = OtherExtents::rank();
+      constexpr other_index_type se0 = other_rank == 0 ?
+        other_index_type(0) :
+        OtherExtents::static_extent(0);
+      static_assert(other_rank <= other_index_type(1) or
+                    actual_padding_stride == dyn or
+                    se0 == dyn or
+                    actual_padding_stride == se0);
+    }
 
     MDSPAN_TEMPLATE_REQUIRES(
       std::size_t other_padding_stride,
       class OtherExtents,
-      /* requires */ (std::is_constructible<extents_type, OtherExtents>::value && (padding_stride == std::experimental::dynamic_extent || other_padding_stride == std::experimental::dynamic_extent || padding_stride == other_padding_stride))
+      /* requires */ (std::is_constructible<extents_type, OtherExtents>::value)
     )
     MDSPAN_INLINE_FUNCTION constexpr
-#ifdef __cpp_conditional_explicit
-    explicit( extents_type::rank() > 0 &&
-	      (padding_stride == std::experimental::dynamic_extent ||
-	       other_padding_stride == std::experimental::dynamic_extent) )
-#endif
-    mapping(const typename layout_left_padded<other_padding_stride>::template mapping<OtherExtents>& other) :
+    P2642_CONDITIONAL_EXPLICIT(( extents_type::rank() ))
+    mapping(const typename std::experimental::layout_stride
+              ::template mapping<OtherExtents>& other) :
+      inner_mapping_(details::pad_extents_left(
+        other.extents(), // FIXME need to pass in other.stride(1)
+	padding_extents_type{other.padding_extents()})),
+      unpadded_extent_(details::unpadded_extent_left(other.extents()))
+    {
+      static_assert(padding_stride == dyn);
+    }
+
+    MDSPAN_TEMPLATE_REQUIRES(
+      std::size_t other_padding_stride,
+      class OtherExtents,
+      /* requires */ (
+        std::is_constructible_v<extents_type, OtherExtents> &&
+        (padding_stride       == dyn ||
+         other_padding_stride == dyn ||
+         padding_stride       == other_padding_stride)
+      )
+    )
+    MDSPAN_INLINE_FUNCTION constexpr
+    P2642_CONDITIONAL_EXPLICIT((
+      extents_type::rank() > 0 &&
+      (padding_stride == dyn || other_padding_stride == dyn)
+    ))
+    mapping(const typename layout_left_padded<other_padding_stride>
+              ::template mapping<OtherExtents>& other) :
       inner_mapping_(details::pad_extents_left(
         other.extents(),
 	padding_extents_type{other.padding_extents()})),
       unpadded_extent_(details::unpadded_extent_left(other.extents()))
     {}
 
-    // FIXME (mfh 2022/09/28) Converting constructor taking
-    // layout_right_padded<other_padding_stride>::mapping<OtherExtents>
-    // is in the proposal, but missing here.
-
-    // layout_stride::mapping deliberately only defines the copy
-    // constructor and copy assignment operator, not the move
-    // constructor or move assignment operator.  This is fine because
-    // all the storage is std::array-like; there's no advantage to
-    // move construction or move assignment.  We imitate this.
-    MDSPAN_INLINE_FUNCTION_DEFAULTED
-    constexpr mapping(const mapping&) noexcept = default;
-    MDSPAN_INLINE_FUNCTION_DEFAULTED _MDSPAN_CONSTEXPR_14_DEFAULTED
-    mapping& operator=(const mapping&) noexcept = default;
+    MDSPAN_TEMPLATE_REQUIRES(
+      size_t other_padding_stride,
+      class OtherExtents,
+      /* requires */ (
+        (extents_type::rank() == 0 or extents_type::rank() == 1) and
+        std::is_constructible_v<extents_type, OtherExtents>
+      )
+    )
+    MDSPAN_INLINE_FUNCTION constexpr
+    P2642_CONDITIONAL_EXPLICIT((
+      ! std::is_convertible_v<OtherExtents, extents_type>
+    ))
+    mapping(const std::experimental::layout_right::mapping<OtherExtents>& other) :
+      inner_mapping_(details::pad_extents_left(
+        other.extents(),
+	padding_extents_type{padding_stride})),
+      unpadded_extent_(details::unpadded_extent_left(other.extents())),
+    {
+      using other_index_type = typename OtherExtents::index_type;
+      constexpr auto other_rank = OtherExtents::rank();
+      constexpr other_index_type se0 = other_rank == 0 ?
+        other_index_type(0) :
+        OtherExtents::static_extent(0);
+      static_assert(other_rank <= other_index_type(1) or
+                    actual_padding_stride == dync or
+                    se0 == dyn or
+                    actual_padding_stride == se0);
+    }
 
     MDSPAN_INLINE_FUNCTION
     constexpr extents_type extents() const noexcept
@@ -573,7 +733,11 @@ struct layout_left_padded {
     constexpr std::array<index_type, extents_type::rank()>
     strides() const noexcept
     {
-      return inner_mapping_.strides();
+      std::array<index_type, extents_type::rank()> s{};
+      for (rank_type r = 0; r < rank(); ++r) {
+        s[r] = inner_mapping_.stride(r);
+      }
+      return s;
     }
 
     MDSPAN_INLINE_FUNCTION
@@ -584,14 +748,18 @@ struct layout_left_padded {
 
     MDSPAN_TEMPLATE_REQUIRES(
       class... Indices,
-      /* requires */ (sizeof...(Indices) == Extents::rank() &&
-        _MDSPAN_FOLD_AND(_MDSPAN_TRAIT(std::is_convertible, Indices, index_type) /*&& ...*/ ) &&
-	_MDSPAN_FOLD_AND(_MDSPAN_TRAIT(std::is_nothrow_constructible, index_type, Indices) /*&& ...*/)
+      /* requires */ (
+        sizeof...(Indices) == Extents::rank() &&
+        (std::is_convertible_v<Indices, index_type> && ... ) &&
+	(std::is_nothrow_constructible<index_type, Indices> && ... )
       )
     )
     MDSPAN_INLINE_FUNCTION
     constexpr size_t operator()(Indices... idxs) const noexcept {
-      // TODO (mfh 2022/08/30) in debug mode, check precondition before forwarding to inner mapping.
+      // TODO (mfh 2022/08/30, mfh 2023/01/16) in debug mode,
+      // check that extents_type::index-cast(i) is
+      // a multidimensional index in extents(),
+      // before forwarding to inner mapping.
       return inner_mapping_(std::forward<Indices>(idxs)...);
     }
 
