@@ -1,10 +1,8 @@
-#include <experimental/mdspan>
+#include <mdspan/mdspan.hpp>
 #include <array>
 #include <iostream>
 #include <tuple>
 #include <type_traits>
-
-namespace stdex = std::experimental;
 
 // There's no separate feature test macro for the C++20 feature
 // of lambdas with named template parameters (P0428R2).
@@ -80,11 +78,11 @@ auto print_pack = []<class ... InputTypes>(InputTypes&& ... input) {
 // This example shows that you can do
 // index arithmetic on an index sequence.
 template<class IndexType, std::size_t ... Extents>
-auto right_extents( stdex::extents<IndexType, Extents...> e )
+auto right_extents( Kokkos::extents<IndexType, Extents...> e )
 {
   static_assert(sizeof...(Extents) != 0);
   return [&]<std::size_t ... Indices>( std::index_sequence<Indices...> ) {
-    return stdex::extents<IndexType, e.static_extent(Indices + 1)...>{
+    return Kokkos::extents<IndexType, e.static_extent(Indices + 1)...>{
       e.extent(Indices + 1)...
     }; 
   }( std::make_index_sequence<sizeof...(Extents) - 1>() );
@@ -101,10 +99,10 @@ auto right_extents( stdex::extents<IndexType, Extents...> e )
 // This needs to be a lambda or function object,
 // not a templated function.
 auto split_extents_at_leftmost =
-  []<class IndexType, std::size_t... Extents>(stdex::extents<IndexType, Extents...> e)
+  []<class IndexType, std::size_t... Extents>(Kokkos::extents<IndexType, Extents...> e)
 {
   static_assert(sizeof...(Extents) != 0);
-  stdex::extents<IndexType, e.static_extent(0)> left_ext(
+  Kokkos::extents<IndexType, e.static_extent(0)> left_ext(
     e.extent(0));
   return std::tuple{left_ext, right_extents(e)};
 };
@@ -116,11 +114,11 @@ auto split_extents_at_leftmost =
 // Returns a new extents object representing
 // all but the rightmost extent of e.
 template<class IndexType, std::size_t ... Extents>
-auto left_extents( stdex::extents<IndexType, Extents...> e )
+auto left_extents( Kokkos::extents<IndexType, Extents...> e )
 {
   static_assert(sizeof...(Extents) != 0);
   return [&]<std::size_t ... Indices>( std::index_sequence<Indices...> ) {
-    return stdex::extents<IndexType, e.static_extent(Indices)...>{
+    return Kokkos::extents<IndexType, e.static_extent(Indices)...>{
       e.extent(Indices)...
     };
   }( std::make_index_sequence<sizeof...(Extents) - 1>() );
@@ -128,10 +126,10 @@ auto left_extents( stdex::extents<IndexType, Extents...> e )
 
 // This needs to be a lambda or function object, not a templated function.
 auto split_extents_at_rightmost =
-  []<class IndexType, std::size_t ... Extents>(stdex::extents<IndexType, Extents...> e)
+  []<class IndexType, std::size_t ... Extents>(Kokkos::extents<IndexType, Extents...> e)
 {
   static_assert(sizeof...(Extents) != 0);
-  stdex::extents<IndexType, e.static_extent(e.rank() - 1)> right_ext(
+  Kokkos::extents<IndexType, e.static_extent(e.rank() - 1)> right_ext(
     e.extent(e.rank() - 1));
   return std::tuple{left_extents(e), right_ext};
 };
@@ -149,10 +147,10 @@ auto split_extents_at_rightmost =
 // optimization information -- e.g., whether we want
 // to apply "#pragma omp simd" to a particular extent.
 template<class Callable, class IndexType, std::size_t Extent>
-void for_each_one_extent(Callable&& callable, stdex::extents<IndexType, Extent> ext)
+void for_each_one_extent(Callable&& callable, Kokkos::extents<IndexType, Extent> ext)
 {
   // If it's a run-time extent, do a run-time loop.
-  if constexpr(ext.static_extent(0) == stdex::dynamic_extent) {
+  if constexpr(ext.static_extent(0) == Kokkos::dynamic_extent) {
     for(IndexType index = 0; index < ext.extent(0); ++index) {
       std::forward<Callable>(callable)(index);  
     }
@@ -176,7 +174,7 @@ void for_each_one_extent(Callable&& callable, stdex::extents<IndexType, Extent> 
 template<class Callable, class IndexType, std::size_t ... Extents>
 void for_each_in_extents_row_major(
   Callable&& callable,
-  stdex::extents<IndexType, Extents...> ext)
+  Kokkos::extents<IndexType, Extents...> ext)
 {
   if constexpr(ext.rank() == 0) {
     return;
@@ -203,12 +201,12 @@ void for_each_in_extents_row_major(
 // The implementation differs in only two places from the row-major version.
 // This suggests a way to generalize.
 //
-// Overloading on stdex::extents<IndexType, LeftExtents..., RightExtent>
+// Overloading on extents<IndexType, LeftExtents..., RightExtent>
 // works fine for the row major case, but not for the column major case.
 template<class Callable, class IndexType, std::size_t ... Extents>
 void for_each_in_extents_col_major(
   Callable&& callable,
-  stdex::extents<IndexType, Extents...> ext)
+  Kokkos::extents<IndexType, Extents...> ext)
 {
   if constexpr(ext.rank() == 0) {
     return;
@@ -242,7 +240,7 @@ void for_each_in_extents_col_major(
 template<class Callable, class IndexType, std::size_t ... Extents,
   class ExtentsReorderer, class ExtentsSplitter, class IndicesReorderer>
 void for_each_in_extents_impl(Callable&& callable,
-  stdex::extents<IndexType, Extents...> ext,
+  Kokkos::extents<IndexType, Extents...> ext,
   ExtentsReorderer reorder_extents,
   ExtentsSplitter split_extents,
   IndicesReorderer reorder_indices)
@@ -280,18 +278,18 @@ void for_each_in_extents_impl(Callable&& callable,
 }
 
 auto extents_identity = []<class IndexType, std::size_t ... Extents>(
-  stdex::extents<IndexType, Extents...> ext)
+  Kokkos::extents<IndexType, Extents...> ext)
 {
   return ext;
 };
 
 auto extents_reverse = []<class IndexType, std::size_t ... Extents>(
-  stdex::extents<IndexType, Extents...> ext)
+  Kokkos::extents<IndexType, Extents...> ext)
 {
   constexpr std::size_t N = ext.rank();
 
   return [&]<std::size_t ... Indices>( std::index_sequence<Indices...> ) {
-    return stdex::extents<
+    return Kokkos::extents<
         IndexType,
         ext.static_extent(N - 1 - Indices)...
       >{ ext.extent(N - 1 - Indices)... };
@@ -325,8 +323,8 @@ auto indices_reverse = [](auto... args) {
 // Row-major iteration
 template<class Callable, class IndexType, std::size_t ... Extents>
 void for_each_in_extents(Callable&& callable,
-  stdex::extents<IndexType, Extents...> ext,
-  stdex::layout_right)
+  Kokkos::extents<IndexType, Extents...> ext,
+  Kokkos::layout_right)
 {
   for_each_in_extents_impl(std::forward<Callable>(callable), ext,
     extents_identity, split_extents_at_leftmost, indices_identity);
@@ -335,8 +333,8 @@ void for_each_in_extents(Callable&& callable,
 // Column-major iteration
 template<class Callable, class IndexType, std::size_t ... Extents>
 void for_each_in_extents(Callable&& callable,
-  stdex::extents<IndexType, Extents...> ext,
-  stdex::layout_left)
+  Kokkos::extents<IndexType, Extents...> ext,
+  Kokkos::layout_left)
 {
   for_each_in_extents_impl(std::forward<Callable>(callable), ext,
     extents_reverse, split_extents_at_rightmost, indices_reverse);
@@ -349,7 +347,7 @@ int main() {
 #if ! defined(__clang__) && defined(MDSPAN_EXAMPLE_CAN_USE_LAMBDA_TEMPLATE_PARAM_LIST)
   // The functions work for any combination
   // of compile-time or run-time extents.
-  stdex::extents<int, 3, stdex::dynamic_extent, 5> e{4};
+  Kokkos::extents<int, 3, Kokkos::dynamic_extent, 5> e{4};
 
   std::cout << "\nRow major:\n";
   for_each_in_extents_row_major(print_pack, e);
@@ -358,10 +356,10 @@ int main() {
   for_each_in_extents_col_major(print_pack, e);
 
   std::cout << "\nfor_each_in_extents: row major:\n";
-  for_each_in_extents(print_pack, e, stdex::layout_right{});
+  for_each_in_extents(print_pack, e, Kokkos::layout_right{});
 
   std::cout << "\nfor_each_in_extents: column major:\n";
-  for_each_in_extents(print_pack, e, stdex::layout_left{});
+  for_each_in_extents(print_pack, e, Kokkos::layout_left{});
 #endif // defined(MDSPAN_EXAMPLE_CAN_USE_LAMBDA_TEMPLATE_PARAM_LIST)
 
   return 0;

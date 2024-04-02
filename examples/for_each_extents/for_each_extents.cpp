@@ -1,4 +1,4 @@
-#include <experimental/mdspan>
+#include <mdspan/mdspan.hpp>
 #include <cassert>
 #include <iostream>
 #include <type_traits>
@@ -26,42 +26,22 @@
 #include <ranges>
 namespace ranges_views = std::views;
 
-namespace stdex = std::experimental;
-
 auto print_args = [] <class ... Args> (Args&&... args) {
   ((std::cout << std::forward<Args>(args) << '\n'), ...);
 };
 
-template<size_t ... Lefts, size_t ... Rights>
-auto concat_index_sequence(std::index_sequence<Lefts...>,
-  std::index_sequence<Rights...>)
-{
-  return std::index_sequence<Lefts..., Rights...>{};
-}
+template <std::size_t... Is>
+auto reverse(std::index_sequence<Is...>) ->
+  std::index_sequence<sizeof...(Is) - 1 - Is...>;
 
-auto reverse_index_sequence(std::index_sequence<> x)
-{
-  return x;  
-}
-
-template<size_t First, size_t ... Rest>
-auto reverse_index_sequence(std::index_sequence<First, Rest...>)
-{
-  return concat_index_sequence(
-    reverse_index_sequence(std::index_sequence<Rest...>{}),
-    std::index_sequence<First>{});
-}
-
-template<size_t N>
-auto make_reverse_index_sequence()
-{
-  return reverse_index_sequence(std::make_index_sequence<N>());
-}
+template <std::size_t N>
+using reverse_index_sequence_t =
+  decltype(reverse(std::make_index_sequence<N>()));
 
 template<class Callable, class IndexType,
   std::size_t ... Extents, std::size_t ... RankIndices>
 void for_each_in_extents_impl(Callable&& f,
-  stdex::extents<IndexType, Extents...> e,
+  Kokkos::extents<IndexType, Extents...> e,
   std::index_sequence<RankIndices...> rank_sequence)
 {
   // In the layout_left case, caller passes in N-1, N-2, ..., 1, 0.
@@ -82,17 +62,17 @@ void for_each_in_extents_impl(Callable&& f,
 
 template<class Callable, class IndexType, std::size_t ... Extents, class Layout>
 void for_each_in_extents(Callable&& f,
-  stdex::extents<IndexType, Extents...> e,
+  Kokkos::extents<IndexType, Extents...> e,
   Layout)
 {
   using layout_type = std::remove_cvref_t<Layout>;
-  if constexpr (std::is_same_v<layout_type, stdex::layout_left>) {
+  if constexpr (std::is_same_v<layout_type, Kokkos::layout_left>) {
     for_each_in_extents_impl(std::forward<Callable>(f), e,
-      make_reverse_index_sequence<e.rank()>());
+      reverse_index_sequence_t<e.rank()>{});
   }
   else { // layout_right or any other layout
     for_each_in_extents_impl(std::forward<Callable>(f), e,
-      std::make_index_sequence<e.rank()>());
+      reverse_index_sequence_t<e.rank()>{});
   }
 }
 
@@ -101,14 +81,14 @@ void for_each_in_extents(Callable&& f,
 int main() {
 
 #if defined(MDSPAN_EXAMPLE_CAN_USE_STD_RANGES)
-  stdex::extents<int, 2, 3> e;
+  Kokkos::extents<int, 2, 3> e;
   auto printer = [] (int i, int j) {
     std::cout << "(" << i << "," << j << ")\n";
   };
   std::cout << "layout_right:\n";
-  for_each_in_extents(printer, e, stdex::layout_right{});
+  for_each_in_extents(printer, e, Kokkos::layout_right{});
   std::cout << "\nlayout_left:\n";
-  for_each_in_extents(printer, e, stdex::layout_left{});
+  for_each_in_extents(printer, e, Kokkos::layout_left{});
 #endif // defined(MDSPAN_EXAMPLE_CAN_USE_STD_RANGES)
 
   return 0;
