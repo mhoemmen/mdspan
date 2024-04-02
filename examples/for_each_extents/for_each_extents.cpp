@@ -6,7 +6,10 @@
 // "gcc trunk" on godbolt.org as of 2023/03/21
 // (> 12.2) does not define __cpp_lib_ranges_iota,
 // yet std::views::iota works just fine.
-#if defined(__cpp_lib_ranges_cartesian_product) // && defined(__cpp_lib_ranges_iota)
+//
+// "icpx C++23" github.com/kokkos/mdspan test build
+// has a broken <ranges> header as of 2024/04/02.
+#if defined(__cpp_lib_ranges_cartesian_product) && (! defined(__INTEL_LLVM_COMPILER)) // && defined(__cpp_lib_ranges_iota)
 #  define MDSPAN_EXAMPLE_CAN_USE_STD_RANGES 1
 #endif
 
