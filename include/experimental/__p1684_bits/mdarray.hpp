@@ -120,6 +120,13 @@ constexpr auto tail(std::index_sequence<First, Rest...>) {
   return std::index_sequence<Rest...>{};
 }
 
+template<class CArray> requires (
+  std::is_array_v<CArray> &&
+  std::rank_v<CArray> > 1u
+  )
+constexpr auto
+carray_to_array(CArray& values);
+
 template<class CArray, std::size_t ... Indices> requires (
   std::is_array_v<CArray> &&
   std::rank_v<CArray> > 1u
@@ -154,7 +161,7 @@ carray_to_array_impl(CArray& values, std::index_sequence<Indices...> seq)
     return result;
   }
 }
-  
+
 template<class CArray> requires (
   std::is_array_v<CArray> &&
   std::rank_v<CArray> > 1u
@@ -165,7 +172,7 @@ carray_to_array(CArray& values)
   return carray_to_array_impl(values,
     std::make_index_sequence<std::rank_v<CArray>>());
 }
-  
+
 template<class CArray, std::size_t ... Indices> requires (
   std::is_array_v<CArray> &&
   std::rank_v<CArray> >= 1u
@@ -389,7 +396,7 @@ public:
       std::rank_v<CArray> == 1u
     )
   )
-  MDSPAN_INLINE_FUNCTION    
+  MDSPAN_INLINE_FUNCTION
   constexpr mdarray(CArray& values)
     : map_(extents_type{}), ctr_{impl::carray_to_array(values)}
   {}
@@ -402,11 +409,11 @@ public:
       std::rank_v<CArray> > 1u
     )
   )
-  MDSPAN_INLINE_FUNCTION    
+  MDSPAN_INLINE_FUNCTION
   constexpr mdarray(CArray& values)
     : map_(extents_type{}), ctr_{impl::carray_to_array(values)}
   {}
-  
+
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdarray& operator= (const mdarray&) = default;
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdarray& operator= (mdarray&&) = default;
   MDSPAN_INLINE_FUNCTION_DEFAULTED
@@ -643,6 +650,6 @@ mdarray(CArray& values) -> mdarray<
   layout_right,
   decltype(impl::carray_to_array(values))
 >;
-  
+
 } // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
 } // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
