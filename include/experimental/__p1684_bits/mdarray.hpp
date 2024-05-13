@@ -74,22 +74,6 @@ carray_to_array(CArray& values)
     std::make_index_sequence<std::extent_v<CArray, 0>>());
 }
 
-template<class ElementType, std::size_t Extent, std::size_t ... Indices>
-requires(! std::is_pointer_v<ElementType> && ! std::is_array_v<ElementType>)
-constexpr std::array<std::remove_cv_t<ElementType>, Extent>
-carray_to_array_impl(ElementType (&values) [Extent], std::index_sequence<Indices...>)
-{
-  return std::array{values[Indices]...};
-}
-
-template<class ElementType, std::size_t Extent>
-requires(! std::is_pointer_v<ElementType> && ! std::is_array_v<ElementType>)
-constexpr std::array<std::remove_cv_t<ElementType>, Extent>
-carray_to_array(ElementType (&values) [Extent])
-{
-  return carray_to_array_impl(values, std::make_index_sequence<Extent>());
-}
-
 template<class ElementType, std::size_t Size, std::size_t ... Indices>
 constexpr std::array<std::remove_cv_t<ElementType>, Size>
 ptr_to_array_impl(ElementType values[],
@@ -99,16 +83,6 @@ ptr_to_array_impl(ElementType values[],
   static_assert(! std::is_array_v<ElementType>);
   return {values[Indices]...};
 }
-
-/*
-template<class ValueType, std::size_t Size>
-constexpr std::array<ValueType, Size>
-ptr_to_array(ValueType values[],
-  std::integral_constant<std::size_t, Size> size)
-{
-  return ptr_to_array_impl(values, size, std::make_index_sequence<Size>());
-}
-*/
 
 template<std::size_t Index>
 constexpr auto tail(std::index_sequence<Index>) {
@@ -120,6 +94,8 @@ constexpr auto tail(std::index_sequence<First, Rest...>) {
   return std::index_sequence<Rest...>{};
 }
 
+// Forward declaration is necessary for "recursion"
+// inside carray_to_array_impl.
 template<class CArray> requires (
   std::is_array_v<CArray> &&
   std::rank_v<CArray> > 1u
@@ -388,25 +364,12 @@ public:
     static_assert( std::is_constructible<extents_type, OtherExtents>::value, "");
   }
 
-  // Corresponds to deduction guide from rank-1 C array
+  // Corresponds to deduction guide from C array
   MDSPAN_TEMPLATE_REQUIRES(
     class CArray,
     /* requires */ (
       std::is_array_v<CArray> &&
-      std::rank_v<CArray> == 1u
-    )
-  )
-  MDSPAN_INLINE_FUNCTION
-  constexpr mdarray(CArray& values)
-    : map_(extents_type{}), ctr_{impl::carray_to_array(values)}
-  {}
-
-  // Corresponds to deduction guide from rank > 1 C array
-  MDSPAN_TEMPLATE_REQUIRES(
-    class CArray,
-    /* requires */ (
-      std::is_array_v<CArray> &&
-      std::rank_v<CArray> > 1u
+      std::rank_v<CArray> >= 1u
     )
   )
   MDSPAN_INLINE_FUNCTION
@@ -626,24 +589,10 @@ private:
   friend class mdarray;
 };
 
-// Rank-1 C array -> layout_right mdarray
-// with container_type = std::array
-template<class CArray>
-requires (std::is_array_v<CArray> && std::rank_v<CArray> == 1u)
-mdarray(CArray&) -> mdarray<
-  std::remove_all_extents_t<CArray>,
-  extents<std::size_t, std::extent_v<CArray, 0>>,
-  layout_right,
-  std::array<
-    std::remove_all_extents_t<CArray>,
-    std::extent_v<CArray, 0>
-  >
->;
-
 // Rank >= 1 C array -> layout_right mdarray
 // with container_type = std::array
 template<class CArray>
-requires (std::is_array_v<CArray> && std::rank_v<CArray> > 1u)
+requires (std::is_array_v<CArray> && std::rank_v<CArray> >= 1u)
 mdarray(CArray& values) -> mdarray<
   std::remove_all_extents_t<CArray>,
   decltype(impl::extents_of_carray(values)),
