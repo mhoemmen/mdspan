@@ -51,6 +51,31 @@ namespace {
   };
 }
 
+namespace impl {
+
+template<class CArray, std::size_t ... Indices> requires (
+  std::is_array_v<CArray> &&
+  std::rank_v<CArray> == 1
+  )
+constexpr std::array<std::remove_all_extents_t<CArray>, std::extent_v<CArray, 0>>
+carray_to_array_impl(CArray& values, std::index_sequence<Indices...>)
+{
+  return std::array{values[Indices]...};
+}
+
+template<class CArray> requires (
+  std::is_array_v<CArray> &&
+  std::rank_v<CArray> == 1
+  )
+constexpr std::array<std::remove_all_extents_t<CArray>, std::extent_v<CArray, 0>>
+carray_to_array(CArray& values)
+{
+  return carray_to_array_impl(values,
+    std::make_index_sequence<std::extent_v<CArray, 0>>());
+}
+  
+} // namespace impl
+
 template <
   class ElementType,
   class Extents,
@@ -242,6 +267,19 @@ public:
   {
     static_assert( std::is_constructible<extents_type, OtherExtents>::value, "");
   }
+
+  // Corresponds to deduction guide from rank-1 C array
+  MDSPAN_TEMPLATE_REQUIRES(
+    class CArray,
+    /* requires */ (
+      std::is_array_v<CArray> &&
+      std::rank_v<CArray> == 1
+    )
+  )
+  MDSPAN_INLINE_FUNCTION    
+  constexpr mdarray(CArray& values)
+    : map_(extents_type{}), ctr_{impl::carray_to_array(values)}
+  {}
 
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdarray& operator= (const mdarray&) = default;
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdarray& operator= (mdarray&&) = default;
@@ -455,6 +493,19 @@ private:
   friend class mdarray;
 };
 
+// Rank-1 C array -> layout_right mdarray
+// with container_type = std::array
+template<class CArray>
+requires (std::is_array_v<CArray> && std::rank_v<CArray> == 1)
+mdarray(CArray&) -> mdarray<
+  std::remove_all_extents_t<CArray>,
+  extents<std::size_t, std::extent_v<CArray, 0>>,
+  layout_right,
+  std::array<
+    std::remove_all_extents_t<CArray>,
+    std::extent_v<CArray, 0>
+  >
+>;
 
 } // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
 } // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
