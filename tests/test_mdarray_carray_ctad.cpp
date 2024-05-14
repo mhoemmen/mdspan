@@ -199,3 +199,39 @@ TEST(TestMdarrayCtorDataCArray, test_mdarray_carray_ctad) {
   __MDSPAN_TESTS_RUN_TEST((test_mdarray_ctad_carray_rank2<float, 3, 4>()))
   __MDSPAN_TESTS_RUN_TEST((test_mdarray_ctad_carray_rank3<float, 3, 4, 5>()))
 }
+
+#if 0
+TEST(TestMdarrayCtorInitializerList, Rank1) {
+  using MDSPAN_IMPL_STANDARD_NAMESPACE::dextents;  
+  using MDSPAN_IMPL_STANDARD_NAMESPACE::extents;
+  using MDSPAN_IMPL_STANDARD_NAMESPACE::layout_right;
+
+  auto error_buffer = allocate_error_buffer();
+  {
+    std::size_t* errors = error_buffer.get();
+    errors[0] = 0;
+    dispatch([errors] _MDSPAN_HOST_DEVICE () {
+      KokkosEx::mdarray m{{1.0f, 2.0f, 3.0f}};
+      static_assert(std::is_same_v<typename decltype(m)::extents_type,
+                    dextents<std::size_t, 1>>);
+      static_assert(std::is_same_v<typename decltype(m)::layout_type,
+                    layout_right>);
+      static_assert(std::is_same_v<typename decltype(m)::container_type,
+                    std::vector<float>>);
+
+      __MDSPAN_DEVICE_ASSERT_EQ(m.rank(), 1);
+      __MDSPAN_DEVICE_ASSERT_EQ(m.rank_dynamic(), 1);
+      __MDSPAN_DEVICE_ASSERT_EQ(m.extent(0), 3);
+
+      for (std::size_t k = 0; k < 3; ++k) {
+#if defined(MDSPAN_USE_BRACKET_OPERATOR) && (MDSPAN_USE_BRACKET_OPERATOR != 0)
+        __MDSPAN_DEVICE_ASSERT_EQ(m[k], (static_cast<float>(k) + 1.0f));
+#else
+        __MDSPAN_DEVICE_ASSERT_EQ(m(k), (static_cast<float>(k) + 1.0f));        
+#endif
+      }
+    });
+    ASSERT_EQ(errors[0], 0);
+  }
+}
+#endif // 0

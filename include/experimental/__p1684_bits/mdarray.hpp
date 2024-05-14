@@ -364,6 +364,14 @@ public:
     static_assert( std::is_constructible<extents_type, OtherExtents>::value, "");
   }
 
+#if 0
+  // Corresponds to deduction guide from std::initializer_list<value_type>
+  MDSPAN_INLINE_FUNCTION
+  constexpr mdarray(std::initializer_list<value_type> values)
+    : map_(extents_type{}), ctr_{values}
+  {}
+#endif // 0
+  
   // Corresponds to deduction guide from C array
   MDSPAN_TEMPLATE_REQUIRES(
     class CArray,
@@ -599,6 +607,24 @@ mdarray(CArray& values) -> mdarray<
   layout_right,
   decltype(impl::carray_to_array(values))
 >;
+
+#if 0
+// Adding a deduction guide from initializer_list<T> breaks the above
+// C array deduction guide, because construction from
+// initializer_list<T> catches every possible creation of an mdarray
+// from curly braces.
+//
+// We may not know values.size() at compile time,
+// so we have to use a dynamically allocated container.
+template<class T>
+mdarray(std::initializer_list<T> values) ->
+mdarray<
+  std::remove_cvref_t<T>,
+  dextents<std::size_t, 1>,
+  layout_right,
+  std::vector<std::remove_cvref_t<T>>
+>;
+#endif // 0  
 
 } // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
 } // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
