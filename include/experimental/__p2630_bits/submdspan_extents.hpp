@@ -38,13 +38,25 @@ constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
 // to contain the mapped indices.
 // end of recursion specialization containing the final index_sequence
 
-template<size_t Counter, size_t... MapIdxs>
+template<
+#if defined(MDSPAN_ENABLE_P3663)
+#  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    std::exposition_only::cw_fixed_value<size_t> Counter
+#  else
+    auto Counter
+#  endif
+  ,
+#else
+  size_t Counter,
+#endif
+  size_t... MapIdxs
+>
 MDSPAN_INLINE_FUNCTION
 constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
   std::constant_wrapper<
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<size_t>(Counter)
+    std::exposition_only::cw_fixed_value<size_t>(Counter.data)
 #  else
     Counter
 #  endif
@@ -59,7 +71,16 @@ constexpr auto inv_map_rank(
 
 // specialization reducing rank by one (i.e., integral slice specifier)
 template<
+#if defined(MDSPAN_ENABLE_P3663)
+#  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    std::exposition_only::cw_fixed_value<size_t> Counter
+#  else
+    auto Counter
+#  endif
+  ,
+#else
   size_t Counter,
+#endif
   class Slice,
   class... SliceSpecifiers,
   size_t... MapIdxs>
@@ -207,7 +228,14 @@ constexpr Integral first_of(const Integral &i) {
 template<auto Value>
 MDSPAN_INLINE_FUNCTION
 constexpr auto
-first_of(std::constant_wrapper<Value> i) {
+first_of(std::constant_wrapper<
+#  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    std::exposition_only::cw_fixed_value<std::remove_cvref_t<decltype(Value)>>(Value)
+#  else
+    Value
+#  endif
+  > i)
+{
   return i;
 }
 #else
@@ -297,7 +325,16 @@ first_of(const strided_slice<OffsetType, ExtentType, StrideType> &r) {
 // of the original view and which rank from the extents.
 // This is needed in the case of slice being full_extent_t.
 MDSPAN_TEMPLATE_REQUIRES(
+#if defined(MDSPAN_ENABLE_P3663)
+#  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    std::exposition_only::cw_fixed_value<size_t> k
+#  else
+    auto k
+#  endif
+  ,
+#else
   size_t k,
+#endif
   class Extents,
   class Integral,
   /* requires */(std::is_convertible_v<Integral, size_t>)
@@ -307,7 +344,7 @@ constexpr Integral last_of(
 #if defined(MDSPAN_ENABLE_P3663)
   std::constant_wrapper<
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<size_t>(k)
+    std::exposition_only::cw_fixed_value<size_t>(k.data)
 #  else
     k
 #  endif
