@@ -1061,10 +1061,16 @@ constexpr void
 check_canonical_kth_submdspan_slice_type(const extents<IndexType, Extents...>& exts, Slice slice)
 {
   if constexpr (! is_canonical_slice_type<IndexType, Slice>()) {
+#if ! defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
     static_assert(false);
+#endif
   }
   else { // 3.2
+#if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    static_assert(check_static_bounds<k, decltype(slice)>(extents<IndexType, Extents...>{}) != check_static_bounds_result::out_of_bounds);
+#else
     static_assert(check_static_bounds<k, decltype(slice)>(exts) != check_static_bounds_result::out_of_bounds);
+#endif
   }
 }
 
@@ -1109,7 +1115,11 @@ constexpr auto
 submdspan_canonicalize_one_slice(const extents<IndexType, Extents...>& exts, Slice s) {
   // Part of [mdspan.sub.slices] 9.
   // This could be combined with the if constexpr branches below.
+#if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+  static_assert(check_static_bounds<k, decltype(s)>(extents<IndexType, Extents...>{}) != check_static_bounds_result::out_of_bounds);
+#else
   static_assert(check_static_bounds<k, decltype(s)>(exts) != check_static_bounds_result::out_of_bounds);
+#endif
 
   // TODO Check Precondition that s is a valid k-th submdspan slice for exts.
 
