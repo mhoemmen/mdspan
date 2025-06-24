@@ -114,7 +114,7 @@ constexpr auto inv_map_rank(
       std::index_sequence<MapIdxs..., counter_value>
     >;
 
-#if defined(MDSPAN_ENABLE_P3663)
+#if defined(MDSPAN_ENABLE_P3663) && ! defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
   static_assert(std::is_same_v<
       decltype(counter + std::cw<size_t(1)>),
       std::constant_wrapper<counter_value + size_t(1)>
@@ -227,16 +227,16 @@ constexpr Integral first_of(const Integral &i) {
 #if defined(MDSPAN_ENABLE_P3663)
 template<auto Value>
 MDSPAN_INLINE_FUNCTION
-constexpr auto
+constexpr std::constant_wrapper<Value>
 first_of(std::constant_wrapper<
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
     Value // std::exposition_only::cw_fixed_value<std::remove_cvref_t<decltype(Value)>>(Value)
 #  else
     Value
 #  endif
-  > i)
+  >)
 {
-  return i;
+  return {};
 }
 #else
 // NOTE This is technically not conforming.
