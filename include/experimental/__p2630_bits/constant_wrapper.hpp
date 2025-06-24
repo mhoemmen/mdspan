@@ -33,7 +33,7 @@ namespace exposition_only {
 // above this point doesn't help either.
 
 // This generally works fine even with Clang 21.
-#define MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND 1
+//#define MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND 1
 
 template<
   exposition_only::cw_fixed_value X,
@@ -88,8 +88,15 @@ namespace exposition_only {
       friend constexpr auto operator*(T) noexcept -> constant_wrapper<(*T::value)> { return {}; }
 
     // binary operators
+#if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    // template<class L, class R> // doesn't help
+    template<constexpr_param L, constexpr_param R>
+      friend constexpr auto operator+(L, R) noexcept -> constant_wrapper<(L{}() + R{}())> { return {}; }
+#else
+    // template<class L, class R> // doesn't help
     template<constexpr_param L, constexpr_param R>
       friend constexpr auto operator+(L, R) noexcept -> constant_wrapper<(L::value + R::value)> { return {}; }
+#endif
     template<constexpr_param L, constexpr_param R>
       friend constexpr auto operator-(L, R) noexcept -> constant_wrapper<(L::value - R::value)> { return {}; }
     template<constexpr_param L, constexpr_param R>
@@ -218,7 +225,7 @@ struct constant_wrapper: exposition_only::cw_operators {
   constexpr operator decltype(auto)() const noexcept { return value; }
   constexpr decltype(auto) operator()() const noexcept requires (!std::invocable<value_type>) { return value; }
 
-#if defined(__cpp_explicit_this_parameter)  
+#if defined(__cpp_explicit_this_parameter)
   using exposition_only::cw_operators::operator();
 #endif  
 };

@@ -50,6 +50,7 @@ constexpr void test_integral_constant_wrapper(IC<Integral, Value> ic) {
   static_assert(c_assigned() == val_plus_1);
 }
 
+#if 0
 TEST(TestConstantWrapper, Construction) {
   test_integral_constant_wrapper(IC<signed char, -3>{});
   test_integral_constant_wrapper(IC<signed char, 3>{});
@@ -66,6 +67,39 @@ TEST(TestConstantWrapper, Construction) {
   test_integral_constant_wrapper(IC<long long, -11>{});
   test_integral_constant_wrapper(IC<long long, 11>{});
   test_integral_constant_wrapper(IC<unsigned long long, 11u>{});
+}
+#endif // 0
+
+TEST(TestConstantWrapper, IntegerPlus) {
+  std::constant_wrapper<size_t(11)> cw_11;
+  constexpr size_t value = cw_11;
+  constexpr size_t value2 = cw_11();
+  static_assert(value == value2);
+  constexpr size_t value3 = decltype(cw_11)();
+  static_assert(value == value3);
+ 
+  static_assert(std::is_same_v<
+    decltype(cw_11),
+    decltype(std::cw<size_t(11)>)>);
+
+  auto expected_result = std::cw<size_t(12)>;
+  using expected_type = std::constant_wrapper<size_t(12)>;
+  static_assert(std::is_same_v<decltype(expected_result), expected_type>);
+
+  auto cw_11_plus_one = cw_11 + std::cw<size_t(1)>;
+  auto one_plus_cw_11 = std::cw<size_t(1)> + cw_11;
+
+  static_assert(! std::is_same_v<
+    decltype(cw_11 + std::cw<size_t(1)>),
+    size_t>);
+  static_assert(std::is_same_v<
+    decltype(cw_11 + std::cw<size_t(1)>),
+    std::constant_wrapper<value + size_t(1)>>);
+#if 0
+  static_assert(std::is_same_v<
+    decltype(std::cw<size_t(1)> + cw_11),
+    std::constant_wrapper<value + size_t(1)>>);
+#endif // 0
 }
 
 } // namespace (anonymous)

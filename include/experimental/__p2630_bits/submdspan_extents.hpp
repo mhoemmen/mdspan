@@ -114,7 +114,7 @@ constexpr auto inv_map_rank(
       std::index_sequence<MapIdxs..., counter_value>
     >;
 
-#if defined(MDSPAN_ENABLE_P3663) && ! defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+#if defined(MDSPAN_ENABLE_P3663) //&& ! defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
   static_assert(std::is_same_v<
       decltype(counter + std::cw<size_t(1)>),
       std::constant_wrapper<counter_value + size_t(1)>
