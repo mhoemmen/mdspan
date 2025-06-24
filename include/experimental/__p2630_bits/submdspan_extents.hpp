@@ -41,7 +41,7 @@ constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
 template<
 #if defined(MDSPAN_ENABLE_P3663)
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<size_t> Counter
+    auto Counter
 #  else
     auto Counter
 #  endif
@@ -56,7 +56,7 @@ constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
   std::constant_wrapper<
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<size_t>(Counter.data)
+    Counter // std::exposition_only::cw_fixed_value<size_t>(Counter.data)
 #  else
     Counter
 #  endif
@@ -89,7 +89,7 @@ constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
   std::constant_wrapper<
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<size_t>(Counter)
+    Counter // std::exposition_only::cw_fixed_value<size_t>(Counter)
 #  else
     Counter
 #  endif
@@ -230,7 +230,7 @@ MDSPAN_INLINE_FUNCTION
 constexpr auto
 first_of(std::constant_wrapper<
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<std::remove_cvref_t<decltype(Value)>>(Value)
+    Value // std::exposition_only::cw_fixed_value<std::remove_cvref_t<decltype(Value)>>(Value)
 #  else
     Value
 #  endif
