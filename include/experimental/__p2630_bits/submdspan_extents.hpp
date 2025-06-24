@@ -327,7 +327,7 @@ first_of(const strided_slice<OffsetType, ExtentType, StrideType> &r) {
 MDSPAN_TEMPLATE_REQUIRES(
 #if defined(MDSPAN_ENABLE_P3663)
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<size_t> k
+    auto k // std::exposition_only::cw_fixed_value<size_t> k
 #  else
     auto k
 #  endif
@@ -344,7 +344,7 @@ constexpr Integral last_of(
 #if defined(MDSPAN_ENABLE_P3663)
   std::constant_wrapper<
 #  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
-    std::exposition_only::cw_fixed_value<size_t>(k.data)
+    k // std::exposition_only::cw_fixed_value<size_t>(k.data)
 #  else
     k
 #  endif
@@ -373,9 +373,7 @@ constexpr auto last_of(
   const Extents &,
   const Slice &i)
 {
-#if defined(MDSPAN_ENABLE_P3663)
   using std::get;
-#endif
   return get<1>(i);
 }
 
@@ -389,9 +387,7 @@ constexpr auto last_of(
   const Extents &,
   const std::tuple<IdxT1, IdxT2>& i)
 {
-#if defined(MDSPAN_ENABLE_P3663)
   using std::get;
-#endif
   return get<1>(i);
 }
 
