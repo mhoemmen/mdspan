@@ -38,17 +38,17 @@ constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
 // to contain the mapped indices.
 // end of recursion specialization containing the final index_sequence
 
-template <
-#if defined(MDSPAN_ENABLE_P3663)
-  auto
-#else
-  size_t
-#endif
-  Counter, size_t... MapIdxs>
+template<size_t Counter, size_t... MapIdxs>
 MDSPAN_INLINE_FUNCTION
 constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<Counter>,
+  std::constant_wrapper<
+#  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    std::exposition_only::cw_fixed_value<size_t>(Counter)
+#  else
+    Counter
+#  endif
+  >,
 #else
   std::integral_constant<size_t, Counter>,
 #endif
@@ -59,19 +59,20 @@ constexpr auto inv_map_rank(
 
 // specialization reducing rank by one (i.e., integral slice specifier)
 template<
-#if defined(MDSPAN_ENABLE_P3663)
-  auto
-#else
-  size_t
-#endif
-  Counter,
+  size_t Counter,
   class Slice,
   class... SliceSpecifiers,
   size_t... MapIdxs>
 MDSPAN_INLINE_FUNCTION
 constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<Counter> counter,
+  std::constant_wrapper<
+#  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    std::exposition_only::cw_fixed_value<size_t>(Counter)
+#  else
+    Counter
+#  endif
+  > counter,
 #else
   std::integral_constant<size_t, Counter>,
 #endif
@@ -296,12 +297,7 @@ first_of(const strided_slice<OffsetType, ExtentType, StrideType> &r) {
 // of the original view and which rank from the extents.
 // This is needed in the case of slice being full_extent_t.
 MDSPAN_TEMPLATE_REQUIRES(
-#if defined(MDSPAN_ENABLE_P3663)
-  auto
-#else
-  size_t
-#endif  
-  k,
+  size_t k,
   class Extents,
   class Integral,
   /* requires */(std::is_convertible_v<Integral, size_t>)
@@ -309,7 +305,13 @@ MDSPAN_TEMPLATE_REQUIRES(
 MDSPAN_INLINE_FUNCTION
 constexpr Integral last_of(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<k>,
+  std::constant_wrapper<
+#  if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+    std::exposition_only::cw_fixed_value<size_t>(k)
+#  else
+    k
+#  endif
+  >,
 #else
   std::integral_constant<size_t, k>,
 #endif
@@ -324,22 +326,13 @@ constexpr Integral last_of(
 // P3663 does not need these index_pair_like overloads,
 // because last_of should never see a pair-like type.
 MDSPAN_TEMPLATE_REQUIRES(
-#if defined(MDSPAN_ENABLE_P3663)
-  auto
-#else
-  size_t
-#endif  
-  k,
+  size_t k,
   class Extents, class Slice,
   /* requires */(index_pair_like<Slice, size_t>::value)
 )
 MDSPAN_INLINE_FUNCTION
 constexpr auto last_of(
-#if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<k>,
-#else
   std::integral_constant<size_t, k>,
-#endif
   const Extents &,
   const Slice &i)
 {
@@ -350,21 +343,12 @@ constexpr auto last_of(
 }
 
 MDSPAN_TEMPLATE_REQUIRES(
-#if defined(MDSPAN_ENABLE_P3663)
-  auto
-#else
-  size_t
-#endif  
-  k,
+  size_t k,
   class Extents, class IdxT1, class IdxT2,
   /* requires */ (index_pair_like<std::tuple<IdxT1, IdxT2>, size_t>::value)
   )
 constexpr auto last_of(
-#if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<k>,
-#else
   std::integral_constant<size_t, k>,
-#endif
   const Extents &,
   const std::tuple<IdxT1, IdxT2>& i)
 {
@@ -375,43 +359,23 @@ constexpr auto last_of(
 }
 
 MDSPAN_TEMPLATE_REQUIRES(
-#if defined(MDSPAN_ENABLE_P3663)
-  auto
-#else
-  size_t
-#endif  
-  k,
+  size_t k,
   class Extents, class IdxT1, class IdxT2,
   /* requires */ (index_pair_like<std::pair<IdxT1, IdxT2>, size_t>::value)
   )
 MDSPAN_INLINE_FUNCTION
 constexpr auto last_of(
-#if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<k>,
-#else
   std::integral_constant<size_t, k>,
-#endif
   const Extents &,
   const std::pair<IdxT1, IdxT2>& i)
 {
   return i.second;
 }
 
-template<
-#if defined(MDSPAN_ENABLE_P3663)
-  auto
-#else
-  size_t
-#endif  
-  k,
-  class Extents, class T>
+template<size_t k, class Extents, class T>
 MDSPAN_INLINE_FUNCTION
 constexpr auto last_of(
-#if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<k>,
-#else
   std::integral_constant<size_t, k>,
-#endif
   const Extents &,
   const std::complex<T> &i)
 {
