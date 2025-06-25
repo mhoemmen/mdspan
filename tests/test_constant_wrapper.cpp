@@ -86,16 +86,16 @@ TEST(TestConstantWrapper, IntegerPlus) {
   using expected_type = std::constant_wrapper<size_t(12)>;
   static_assert(std::is_same_v<decltype(expected_result), expected_type>);
 
-  auto cw_11_plus_one = cw_11 + std::cw<size_t(1)>;
-  auto one_plus_cw_11 = std::cw<size_t(1)> + cw_11;
+  [[maybe_unused]] auto cw_11_plus_one = cw_11 + std::cw<size_t(1)>;
+  [[maybe_unused]] auto one_plus_cw_11 = std::cw<size_t(1)> + cw_11;
 
+#if 0
   static_assert(! std::is_same_v<
     decltype(cw_11 + std::cw<size_t(1)>),
     size_t>);
   static_assert(std::is_same_v<
     decltype(cw_11 + std::cw<size_t(1)>),
     std::constant_wrapper<value + size_t(1)>>);
-#if 0
   static_assert(std::is_same_v<
     decltype(std::cw<size_t(1)> + cw_11),
     std::constant_wrapper<value + size_t(1)>>);

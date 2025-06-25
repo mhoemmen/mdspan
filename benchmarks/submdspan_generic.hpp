@@ -41,8 +41,8 @@ class random_state_t {
 public:
   using seed_type = std::mt19937::result_type;
 
-  constexpr random_state_t() : gen_(default_seed) {}
-  constexpr random_state_t(seed_type seed) : gen_(seed) {}
+  random_state_t() : gen_(default_seed) {}
+  random_state_t(seed_type seed) : gen_(seed) {}
 
   std::mt19937& generator() noexcept { return gen_; }
 
