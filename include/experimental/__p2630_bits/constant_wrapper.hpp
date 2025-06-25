@@ -294,54 +294,52 @@ namespace exposition_only {
   cw_fixed_value(T) -> cw_fixed_value<T>;                     // exposition only
 
   namespace cw_operators { // exposition only
-    // A class that inherits from this will have access
-    // to the overloaded arithmetic operators below.
-    template<class... Ts>
-    struct adl {};
-
+    template<class...>
+    struct adl {
 #if ! defined(MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM)
 //#define MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM constexpr_param
 #define MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM class
 #endif
 
-    // unary operators
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM T>
-      constexpr auto operator+(T) noexcept -> constant_wrapper<(+T::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM T>
-      constexpr auto operator-(T) noexcept -> constant_wrapper<(-T::value)> { return {}; }
+      // unary operators
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM T>
+      friend constexpr auto operator+(T) noexcept -> constant_wrapper<(+T::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM T>
+      friend constexpr auto operator-(T) noexcept -> constant_wrapper<(-T::value)> { return {}; }
 
-    // binary operators
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator+(L, R) noexcept -> constant_wrapper<(L::value + R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator-(L, R) noexcept -> constant_wrapper<(L::value - R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator*(L, R) noexcept -> constant_wrapper<(L::value * R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator/(L, R) noexcept -> constant_wrapper<(L::value / R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator%(L, R) noexcept -> constant_wrapper<(L::value % R::value)> { return {}; }
+      // binary operators
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator+(L, R) noexcept -> constant_wrapper<(L::value + R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator-(L, R) noexcept -> constant_wrapper<(L::value - R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator*(L, R) noexcept -> constant_wrapper<(L::value * R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator/(L, R) noexcept -> constant_wrapper<(L::value / R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator%(L, R) noexcept -> constant_wrapper<(L::value % R::value)> { return {}; }
 
-    // comparisons
+      // comparisons
 
 #if defined(__cpp_impl_three_way_comparison)
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator<=>(L, R) noexcept -> constant_wrapper<(L::value <=> R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator<=>(L, R) noexcept -> constant_wrapper<(L::value <=> R::value)> { return {}; }
 #endif
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator<(L, R) noexcept -> constant_wrapper<(L::value < R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator<=(L, R) noexcept -> constant_wrapper<(L::value <= R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator==(L, R) noexcept -> constant_wrapper<(L::value == R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator!=(L, R) noexcept -> constant_wrapper<(L::value != R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator>(L, R) noexcept -> constant_wrapper<(L::value > R::value)> { return {}; }
-    template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
-      constexpr auto operator>=(L, R) noexcept -> constant_wrapper<(L::value >= R::value)> { return {}; }
-  };
-}
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator<(L, R) noexcept -> constant_wrapper<(L::value < R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator<=(L, R) noexcept -> constant_wrapper<(L::value <= R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator==(L, R) noexcept -> constant_wrapper<(L::value == R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator!=(L, R) noexcept -> constant_wrapper<(L::value != R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator>(L, R) noexcept -> constant_wrapper<(L::value > R::value)> { return {}; }
+      template<MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM L, MDSPAN_CONSTANT_WRAPPER_OPERATOR_TEMPLATE_PARAM R>
+      friend constexpr auto operator>=(L, R) noexcept -> constant_wrapper<(L::value >= R::value)> { return {}; }
+    };
+  } // namespace cw_operators
+} // namespace exposition_only
 
 template<exposition_only::cw_fixed_value X, typename>
 struct constant_wrapper : exposition_only::cw_operators::adl<> {
