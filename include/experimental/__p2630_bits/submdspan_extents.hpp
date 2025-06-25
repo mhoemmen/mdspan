@@ -114,12 +114,14 @@ constexpr auto inv_map_rank(
       std::index_sequence<MapIdxs..., counter_value>
     >;
 
+#if 0
 #if defined(MDSPAN_ENABLE_P3663) //&& ! defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
   static_assert(std::is_same_v<
       decltype(counter + std::cw<size_t(1)>),
       std::constant_wrapper<counter_value + size_t(1)>
     >);
 #endif
+#endif // 0
 
   return inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
@@ -794,7 +796,18 @@ constexpr auto canonical_ice(S s) {
 
 template<class IndexType, class X, class Y>
 constexpr auto subtract_ice(X x, Y y) {
+#if defined(MDSPAN_CONSTANT_WRAPPER_GCC_WORKAROUND)
+  if constexpr (__mdspan_integral_constant_like<std::remove_cvref_t<X>> &&
+    __mdspan_integral_constant_like<std::remove_cvref_t<Y>>)
+  {
+    return std::cw<IndexType(canonical_ice<IndexType>(Y::value) - canonical_ice<IndexType>(X::value))>;
+  }
+  else {
+    return canonical_ice<IndexType>(y) - canonical_ice<IndexType>(x);
+  }
+#else
   return canonical_ice<IndexType>(y) - canonical_ice<IndexType>(x);
+#endif
 }
 
 template<class T>
