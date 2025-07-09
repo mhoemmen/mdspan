@@ -29,8 +29,36 @@ namespace detail {
 template<class T>
 constexpr bool is_constant_wrapper = false;
 
+//template<auto Value, class Type>
+//constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
+
+//template<::std::exposition_only::cw_fixed_value X, class Unused>
+//constexpr bool is_constant_wrapper<
+//    ::std::constant_wrapper<X, Unused>
+//  > = true;
+
+//template<
+//  class Type,
+//  ::std::exposition_only::cw_fixed_value<Type> X
+//>
+//constexpr bool is_constant_wrapper<
+//    ::std::constant_wrapper<X, Type>
+//  > = true;
+
 template<auto Value, class Type>
-constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
+constexpr bool is_constant_wrapper<
+    ::std::constant_wrapper<Value, Type>
+  > = true;
+
+template<>
+constexpr bool is_constant_wrapper<
+    ::std::constant_wrapper<std::exposition_only::cw_fixed_value<size_t>{1UL}, size_t>
+  > = true;
+
+template<>
+constexpr bool is_constant_wrapper<
+    ::std::constant_wrapper<std::exposition_only::cw_fixed_value<int>{1}, int>
+  > = true;
 #endif
 
 // Mapping from submapping ranks to srcmapping ranks
@@ -40,7 +68,7 @@ constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
 
 template<
 #if defined(MDSPAN_ENABLE_P3663)
-  auto Counter,
+  class Counter,
 #else
   size_t Counter,
 #endif
@@ -49,7 +77,7 @@ template<
 MDSPAN_INLINE_FUNCTION
 constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<Counter>,
+  Counter,
 #else
   std::integral_constant<size_t, Counter>,
 #endif
@@ -61,7 +89,7 @@ constexpr auto inv_map_rank(
 // specialization reducing rank by one (i.e., integral slice specifier)
 template<
 #if defined(MDSPAN_ENABLE_P3663)
-  auto Counter,
+  class Counter,
 #else
   size_t Counter,
 #endif
@@ -71,7 +99,7 @@ template<
 MDSPAN_INLINE_FUNCTION
 constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<Counter> counter,
+  Counter counter,
 #else
   std::integral_constant<size_t, Counter>,
 #endif
@@ -81,7 +109,7 @@ constexpr auto inv_map_rank(
 {
   constexpr size_t counter_value = 
 #if defined(MDSPAN_ENABLE_P3663)
-    decltype(counter){}();
+    counter;
 #else
     Counter;
 #endif
@@ -1034,6 +1062,32 @@ check_canonical_kth_submdspan_slice_type(
 {
   if constexpr (! is_canonical_slice_type<IndexType, Slice>()) {
 #if defined(MDSPAN_CONSTANT_WRAPPER_WORKAROUND)
+
+    if constexpr (is_strided_slice<Slice>::value) {
+      static_assert(is_canonical_submdspan_index_type<IndexType, typename Slice::offset_type>());
+      static_assert(is_canonical_submdspan_index_type<IndexType, typename Slice::extent_type>());
+
+      //static_assert(is_canonical_submdspan_index_type<IndexType, typename Slice::stride_type>());
+      {
+        using stride_type = typename Slice::stride_type;
+        if constexpr (! std::is_same_v<IndexType, stride_type>) {
+          static_assert(! std::is_integral_v<stride_type>);
+          static_assert(std::is_class_v<stride_type>);
+          static_assert(is_constant_wrapper<stride_type>);
+        }
+      }
+
+
+      if constexpr (
+        is_constant_wrapper<typename Slice::stride_type> &&
+        is_constant_wrapper<typename Slice::extent_type>)
+      {
+        constexpr auto Stride = de_ice(typename Slice::stride_type{});
+        constexpr auto Extent = de_ice(typename Slice::extent_type{});
+        static_assert(Extent == 0 || Stride > 0); // 2.3.2
+      }
+    }
+
     static_assert(is_canonical_slice_type<IndexType, Slice>());
 #else
     static_assert(false);
