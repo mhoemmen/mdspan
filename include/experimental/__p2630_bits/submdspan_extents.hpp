@@ -29,34 +29,9 @@ namespace detail {
 template<class T>
 constexpr bool is_constant_wrapper = false;
 
-//template<auto Value, class Type>
-//constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
-
-//template<::std::exposition_only::cw_fixed_value X, class Unused>
-//constexpr bool is_constant_wrapper<
-//    ::std::constant_wrapper<X, Unused>
-//  > = true;
-
-//template<
-//  class Type,
-//  ::std::exposition_only::cw_fixed_value<Type> X
-//>
-//constexpr bool is_constant_wrapper<
-//    ::std::constant_wrapper<X, Type>
-//  > = true;
-
 template<auto Value, class Type>
 constexpr bool is_constant_wrapper<
     ::std::constant_wrapper<Value, Type>
-  > = true;
-
-template<
-  ::std::integral Type,
-  Type Value>
-constexpr bool is_constant_wrapper<
-    ::std::constant_wrapper<
-      ::std::exposition_only::cw_fixed_value<Type>{Value}, Type
-    >
   > = true;
 #endif
 
