@@ -261,22 +261,12 @@ namespace exposition_only {
   cw_fixed_value(T) -> cw_fixed_value<T>;                     // exposition only
 } // namespace exposition_only
 
-template<
-  exposition_only::cw_fixed_value X,
-  typename unspecified = typename decltype(X)::type // exposition only
->
-struct constant_wrapper {};
 
 template<
-  std::integral Type,
-  Type Value
+  auto X,
+  typename unspecified = typename decltype(X)::type // exposition only
 >
-struct constant_wrapper<
-  exposition_only::cw_fixed_value<Type>{Value},
-  Type>
-{
-  static constexpr exposition_only::cw_fixed_value<Type> X{Value};
-  
+struct constant_wrapper {
   static constexpr const auto & value = X.data;
   using type = constant_wrapper;
   using value_type = typename decltype(X)::type;
