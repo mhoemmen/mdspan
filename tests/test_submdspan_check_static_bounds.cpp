@@ -165,6 +165,14 @@ void test_full_extent(
 template<int Value>
 using IC = std::integral_constant<int, Value>;
 
+TEST(Submdspan, PlacateSomeCompilers) {
+  // Some compilers complain that convertible_to_full_extent_t's
+  // conversion operator to full_extent_t is unused, so let's use it.
+  constexpr convertible_to_full_extent_t thing;
+  [[maybe_unused]] auto result = Kokkos::full_extent_t(thing);
+  static_assert(std::is_same_v<decltype(result), Kokkos::full_extent_t>);
+}
+  
 TEST(Submdspan, CheckStaticBounds) {
   using Kokkos::detail::check_static_bounds;
   using Kokkos::detail::check_static_bounds_result;
