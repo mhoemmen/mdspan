@@ -398,24 +398,24 @@ constexpr auto last_of(
 #endif
 template <
 #if defined(MDSPAN_ENABLE_P3663)
-  auto
+  class ConstantWrapper, // TODO constrain to be constant_wrapper?
 #else
-  size_t
-#endif  
-  k,
-  class Extents>
+  size_t k,
+#endif
+  class Extents
+>
 MDSPAN_INLINE_FUNCTION
 constexpr auto last_of(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<k>,
+  ConstantWrapper k,
 #else
   std::integral_constant<size_t, k>,
 #endif
-  const Extents &ext,
+  const Extents& ext,
   ::MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent_t)
 {
 #if defined(MDSPAN_ENABLE_P3663)
-  constexpr size_t k_value = std::constant_wrapper<k>{}();
+  constexpr size_t k_value = k;
 #else
   constexpr size_t k_value = k;
 #endif
