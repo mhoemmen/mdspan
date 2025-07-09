@@ -261,11 +261,14 @@ namespace exposition_only {
   cw_fixed_value(T) -> cw_fixed_value<T>;                     // exposition only
 } // namespace exposition_only
 
+
 template<
-  exposition_only::cw_fixed_value X,
-  typename unspecified = typename decltype(X)::type // exposition only
+  auto Value,
+  typename unspecified = decltype(Value)
 >
 struct constant_wrapper {
+  static constexpr exposition_only::cw_fixed_value X{Value};
+  
   static constexpr const auto & value = X.data;
   using type = constant_wrapper;
   using value_type = typename decltype(X)::type;
@@ -274,7 +277,7 @@ struct constant_wrapper {
   constexpr decltype(auto) operator()() const noexcept requires (!std::invocable<value_type>) { return value; }
 };
 
-template<exposition_only::cw_fixed_value X>
+template<auto X>
   constinit auto cw = constant_wrapper<X>{};
 
 } // namespace std

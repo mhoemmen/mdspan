@@ -122,6 +122,7 @@ if(MDSPAN_ENABLE_P3663)
   mdspan_add_test(test_strided_slice)
   mdspan_add_test(test_canonicalize_slices)
   mdspan_add_test(test_submdspan_check_static_bounds)
+  mdspan_add_test(test_is_constant_wrapper)
 endif()
 
 mdspan_add_test(test_convertible_to_index_type)

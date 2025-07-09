@@ -30,7 +30,9 @@ template<class T>
 constexpr bool is_constant_wrapper = false;
 
 template<auto Value, class Type>
-constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
+constexpr bool is_constant_wrapper<
+    ::std::constant_wrapper<Value, Type>
+  > = true;
 #endif
 
 // Mapping from submapping ranks to srcmapping ranks
@@ -40,7 +42,7 @@ constexpr bool is_constant_wrapper<std::constant_wrapper<Value, Type>> = true;
 
 template<
 #if defined(MDSPAN_ENABLE_P3663)
-  auto Counter,
+  class Counter,
 #else
   size_t Counter,
 #endif
@@ -49,7 +51,7 @@ template<
 MDSPAN_INLINE_FUNCTION
 constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<Counter>,
+  Counter,
 #else
   std::integral_constant<size_t, Counter>,
 #endif
@@ -61,7 +63,7 @@ constexpr auto inv_map_rank(
 // specialization reducing rank by one (i.e., integral slice specifier)
 template<
 #if defined(MDSPAN_ENABLE_P3663)
-  auto Counter,
+  class Counter,
 #else
   size_t Counter,
 #endif
@@ -71,7 +73,7 @@ template<
 MDSPAN_INLINE_FUNCTION
 constexpr auto inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<Counter> counter,
+  Counter counter,
 #else
   std::integral_constant<size_t, Counter>,
 #endif
@@ -81,7 +83,7 @@ constexpr auto inv_map_rank(
 {
   constexpr size_t counter_value = 
 #if defined(MDSPAN_ENABLE_P3663)
-    decltype(counter){}();
+    counter;
 #else
     Counter;
 #endif
@@ -398,24 +400,24 @@ constexpr auto last_of(
 #endif
 template <
 #if defined(MDSPAN_ENABLE_P3663)
-  auto
+  class ConstantWrapper, // TODO constrain to be constant_wrapper?
 #else
-  size_t
-#endif  
-  k,
-  class Extents>
+  size_t k,
+#endif
+  class Extents
+>
 MDSPAN_INLINE_FUNCTION
 constexpr auto last_of(
 #if defined(MDSPAN_ENABLE_P3663)
-  std::constant_wrapper<k>,
+  ConstantWrapper k,
 #else
   std::integral_constant<size_t, k>,
 #endif
-  const Extents &ext,
+  const Extents& ext,
   ::MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent_t)
 {
 #if defined(MDSPAN_ENABLE_P3663)
-  constexpr size_t k_value = std::constant_wrapper<k>{}();
+  constexpr size_t k_value = k;
 #else
   constexpr size_t k_value = k;
 #endif
