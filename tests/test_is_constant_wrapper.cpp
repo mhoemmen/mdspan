@@ -46,7 +46,7 @@ TEST(IsConstantWrapper, Test0) {
   static_assert(! my_is_constant_wrapper<some_struct>);
 
   [[maybe_unused]] auto forty_two = ::std::cw<42>;
-  //static_assert(is_constant_wrapper< decltype(forty_two) >);
+  static_assert(is_constant_wrapper< decltype(forty_two) >);
   static_assert(my_is_constant_wrapper< decltype(forty_two) >);
 
   //using type = printer<decltype(forty_two)>::type;
@@ -57,7 +57,6 @@ TEST(IsConstantWrapper, Test0) {
       >
     >);
 
-#if 0
   [[maybe_unused]] auto forty_two_a = ::std::constant_wrapper<42>{};
   static_assert(is_constant_wrapper< decltype(forty_two_a) >);
   static_assert(my_is_constant_wrapper< decltype(forty_two_a) >);
@@ -71,6 +70,5 @@ TEST(IsConstantWrapper, Test0) {
   static_assert(is_constant_wrapper< decltype(forty_two_c) >);
   static_assert(my_is_constant_wrapper< decltype(forty_two_c) >);
 
-  //static_assert(! is_constant_wrapper< decltype(::std::cw<size_t(42)>) >);
-#endif // 0
+  static_assert(is_constant_wrapper< decltype(::std::cw<size_t(42)>) >);
 }
