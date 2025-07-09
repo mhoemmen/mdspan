@@ -26,20 +26,9 @@ struct some_struct {};
 template<class T>
 constexpr bool my_is_constant_wrapper = false;
 
-//template<auto Value, class Type>
-//constexpr bool my_is_constant_wrapper<
-//  ::std::constant_wrapper<Value, Type>> = true;
-
-template<auto Value>
+template<auto Value, class Type>
 constexpr bool my_is_constant_wrapper<
-  ::std::constant_wrapper<Value>> = true;
-
-template<class Type, Type Value>
-constexpr bool my_is_constant_wrapper<
-    ::std::constant_wrapper<
-      ::std::exposition_only::cw_fixed_value<Type>{Value},
-      Type
-    >
+    ::std::constant_wrapper<Value, Type>
   > = true;
 
 template<class T>
