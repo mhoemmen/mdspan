@@ -50,14 +50,13 @@ constexpr bool is_constant_wrapper<
     ::std::constant_wrapper<Value, Type>
   > = true;
 
-template<>
+template<
+  ::std::integral Type,
+  Type Value>
 constexpr bool is_constant_wrapper<
-    ::std::constant_wrapper<std::exposition_only::cw_fixed_value<size_t>{1UL}, size_t>
-  > = true;
-
-template<>
-constexpr bool is_constant_wrapper<
-    ::std::constant_wrapper<std::exposition_only::cw_fixed_value<int>{1}, int>
+    ::std::constant_wrapper<
+      ::std::exposition_only::cw_fixed_value<Type>{Value}, Type
+    >
   > = true;
 #endif
 
