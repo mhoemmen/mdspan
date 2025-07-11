@@ -62,7 +62,7 @@ else()
     add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
   endif()
   
-  add_library(GTest::gtest_main ALIAS gtest_main)
+  #add_library(GTest::gtest_main ALIAS gtest_main)
 endif()
 
 # FIXME_MSVC

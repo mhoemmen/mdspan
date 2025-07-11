@@ -231,7 +231,14 @@ MDSPAN_INLINE_FUNCTION
 constexpr
 auto
 first_of(const ::MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent_t &) {
-  return std::cw<size_t(0)>;
+  // CUDA 12.9 + GCC 14.3.0 reports the following error
+  // on the commented-out line of code.
+  //
+  // error #20094-D: a host variable "std::cw [with X=0UL]" cannot be
+  // directly read in a device function
+  //
+  //return std::cw<size_t(0)>;
+  return std::constant_wrapper<size_t(0)>{};
 }
 
 #else
