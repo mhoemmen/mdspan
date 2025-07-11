@@ -103,7 +103,7 @@ constexpr auto inv_map_rank(
 
   return inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-    std::cw<counter_value + size_t(1)>,
+    std::constant_wrapper<counter_value + size_t(1)>{},
 #else
     std::integral_constant<size_t, Counter + 1>(),
 #endif
@@ -231,8 +231,10 @@ MDSPAN_INLINE_FUNCTION
 constexpr
 auto
 first_of(const ::MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent_t &) {
-  // CUDA 12.9 + GCC 14.3.0 reports the following error
-  // on the commented-out line of code.
+  // We can't use std::cw here (and generally in many places), because
+  // NVCC reports an error, due to std::sw<Value> generally being a
+  // constant that lives on host.  For example, CUDA 12.9 + GCC 14.3.0
+  // reports the following error on the commented-out line of code.
   //
   // error #20094-D: a host variable "std::cw [with X=0UL]" cannot be
   // directly read in a device function
@@ -434,7 +436,7 @@ constexpr auto last_of(
   }
   else {
 #if defined(MDSPAN_ENABLE_P3663)
-    return std::cw<Extents::static_extent(k_value)>;
+    return std::constant_wrapper<Extents::static_extent(k_value)>{};
 #else
     return integral_constant<size_t, Extents::static_extent(k_value)>();
 #endif
@@ -486,7 +488,7 @@ template <class T>
 MDSPAN_INLINE_FUNCTION
 constexpr auto stride_of(const T &) {
 #if defined(MDSPAN_ENABLE_P3663)
-  return std::cw<size_t(1)>;
+  return std::constant_wrapper<size_t(1)>{};
 #else
   return integral_constant<size_t, 1>();
 #endif
@@ -518,7 +520,7 @@ constexpr auto divide(std::constant_wrapper<v0> i0,
 
   // cutting short division by zero
   // this is used for strided_slice with zero extent/stride
-  return std::cw<IndexType(i0() == 0 ? 0 : i0() / i1())>;
+  return std::constant_wrapper<IndexType(i0() == 0 ? 0 : i0() / i1())>{};
 }
 #else
 template <class IndexT, class T0, T0 v0, class T1, T1 v1>
@@ -548,7 +550,7 @@ constexpr auto multiply(std::constant_wrapper<v0> i0,
   static_assert(std::is_signed_v<I0> || std::is_unsigned_v<I0>);
   static_assert(std::is_signed_v<I1> || std::is_unsigned_v<I1>);
 
-  return std::cw<IndexType(i0() * i1())>;
+  return std::constant_wrapper<IndexType(i0() * i1())>{};
 }
 #else
 template <class IndexT, class T0, T0 v0, class T1, T1 v1>
@@ -646,7 +648,7 @@ struct extents_constructor {
         decltype(first_of(std::declval<Slice>())),
         decltype(last_of(
 #if defined(MDSPAN_ENABLE_P3663)
-          std::cw<Extents::rank() - K>,
+          std::constant_wrapper<Extents::rank() - K>{},
 #else
           std::integral_constant<size_t, Extents::rank() - K>(),
 #endif
@@ -660,7 +662,7 @@ struct extents_constructor {
         ext, slices_and_extents...,
         index_t(last_of(
 #if defined(MDSPAN_ENABLE_P3663)
-          std::cw<Extents::rank() - K>,
+          std::constant_wrapper<Extents::rank() - K>{},
 #else
           std::integral_constant<size_t, Extents::rank() - K>(),
 #endif
@@ -754,7 +756,7 @@ constexpr auto canonical_ice(S s) {
   // of `cw`, so we don't get a weird constant_wrapper whose value
   // has a different type than the second template argument.
   if constexpr (__mdspan_integral_constant_like<S>) {
-    return std::cw<static_cast<IndexType>(index_cast<IndexType>(S::value))>;
+    return std::constant_wrapper<static_cast<IndexType>(index_cast<IndexType>(S::value))>{};
   }
   else {
     return static_cast<IndexType>(index_cast<IndexType>(s));
@@ -769,7 +771,7 @@ constexpr auto subtract_ice(X x, Y y) {
   if constexpr (__mdspan_integral_constant_like<std::remove_cvref_t<X>> &&
     __mdspan_integral_constant_like<std::remove_cvref_t<Y>>)
   {
-    return std::cw<IndexType(canonical_ice<IndexType>(Y::value) - canonical_ice<IndexType>(X::value))>;
+    return std::constant_wrapper<IndexType(canonical_ice<IndexType>(Y::value) - canonical_ice<IndexType>(X::value))>{};
   }
   else {
     return canonical_ice<IndexType>(y) - canonical_ice<IndexType>(x);
@@ -1136,12 +1138,12 @@ submdspan_canonicalize_one_slice(const extents<IndexType, Extents...>& exts, Sli
     return strided_slice{
       .offset = canonical_ice<IndexType>(s.real()),
       .extent = canonical_ice<IndexType>(s.imag() - s.real()),
-      .stride = std::cw<IndexType(1)>
+      .stride = std::constant_wrapper<IndexType(1)>{}
     };
 #else
     auto offset = canonical_ice<IndexType>(s.real());
     auto extent = canonical_ice<IndexType>(s.imag() - s.real());
-    auto stride = std::cw<IndexType(1)>;
+    auto stride = std::constant_wrapper<IndexType(1)>{};
     return strided_slice<decltype(offset),
                          decltype(extent),
                          decltype(stride)> {
@@ -1163,12 +1165,12 @@ submdspan_canonicalize_one_slice(const extents<IndexType, Extents...>& exts, Sli
     return strided_slice{
       .offset = canonical_ice<IndexType>(s_k0),
       .extent = subtract_ice<IndexType>(s_k0, s_k1),
-      .stride = std::cw<IndexType(1)>
+      .stride = std::constant_wrapper<IndexType(1)>{}
     };
 #else
     auto offset = canonical_ice<IndexType>(s_k0);
     auto extent = subtract_ice<IndexType>(s_k0, s_k1);
-    auto stride = std::cw<IndexType(1)>;
+    auto stride = std::constant_wrapper<IndexType(1)>{};
     return strided_slice<decltype(offset),
                          decltype(extent),
                          decltype(stride)> {

@@ -26,7 +26,7 @@
 
 template <class E, class AllExtents>
 constexpr void test_runtime_observers(E ext, AllExtents expected) {
-  for (typename E::rank_type r = 0; r < ext.rank(); r++) {
+  for (typename E::rank_type r = 0; r != ext.rank(); r++) {
     ASSERT_SAME_TYPE(decltype(ext.extent(0)), typename E::index_type);
     ASSERT_NOEXCEPT(ext.extent(0));
     assert(ext.extent(r) == static_cast<typename E::index_type>(expected[r]));
@@ -45,7 +45,7 @@ constexpr void test_construction(AllExtents all_ext) {
 
   // test construction from just dynamic extents
   // create an array of just the extents corresponding to dynamic values
-  if constexpr (E::rank_dynamic() > 0) {
+  if constexpr (E::rank_dynamic() != 0) {
     std::array<typename AllExtents::value_type, E::rank_dynamic()> dyn_ext{0};
     size_t dynamic_idx = 0;
     for (size_t r = 0; r < E::rank(); r++) {

@@ -335,7 +335,7 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(
     using dst_mapping_t = typename layout_stride::mapping<dst_ext_t>;
     auto inv_map = detail::inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-      std::cw<size_t(0)>,
+      std::constant_wrapper<size_t(0)>{},
 #else
       std::integral_constant<size_t, 0>(),
 #endif
@@ -424,7 +424,7 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
       } else { // layout_stride
     auto inv_map = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-      std::cw<size_t(0)>,
+      std::constant_wrapper<size_t(0)>{},
 #else
       std::integral_constant<size_t, 0>(),
 #endif
@@ -592,7 +592,7 @@ layout_right::mapping<Extents>::submdspan_mapping_impl(
     using dst_mapping_t = typename layout_stride::mapping<dst_ext_t>;
     auto inv_map = detail::inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-      std::cw<size_t(0)>,
+      std::constant_wrapper<size_t(0)>{},
 #else
       std::integral_constant<size_t, 0>(),
 #endif
@@ -673,7 +673,7 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_right_padded<PaddingValue>::mapping<Exten
       } else { // layout_stride
     auto inv_map = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-      std::cw<size_t(0)>,
+      std::constant_wrapper<size_t(0)>{},
 #else
       std::integral_constant<size_t, 0>(),
 #endif
@@ -725,7 +725,7 @@ layout_stride::mapping<Extents>::submdspan_mapping_impl(
   using dst_ext_t = decltype(dst_ext);
   auto inv_map = detail::inv_map_rank(
 #if defined(MDSPAN_ENABLE_P3663)
-    std::cw<size_t(0)>,
+    std::constant_wrapper<size_t(0)>{},
 #else
     std::integral_constant<size_t, 0>(),
 #endif
