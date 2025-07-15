@@ -95,7 +95,7 @@ constexpr void test_mdspan_ctor(const H& handle, const M& map, const A& acc) {
     // test from dynamic extents
     std::array<typename MDS::index_type, MDS::rank_dynamic()> exts_dynamic{};
     size_t r_dyn = 0;
-    for (size_t r = 0; r < MDS::rank(); r++) {
+    for (size_t r = 0; r != MDS::rank(); r++) {
       if (MDS::static_extent(r) == std::dynamic_extent)
         exts_dynamic[r_dyn++] = exts[r];
     }

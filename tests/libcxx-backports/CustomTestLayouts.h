@@ -102,7 +102,7 @@ public:
       mapping(mapping<OtherExtents>&& other) noexcept {
     std::array<index_type, extents_type::rank_dynamic()> dyn_extents;
     rank_type count = 0;
-    for (rank_type r = 0; r < extents_type::rank(); r++) {
+    for (rank_type r = 0; r != extents_type::rank(); r++) {
       if (extents_type::static_extent(r) == std::dynamic_extent) {
         dyn_extents[count++] = other.extents().extent(r);
       }
@@ -145,7 +145,7 @@ public:
   static constexpr bool is_always_strided() noexcept { return false; }
 
   constexpr bool is_unique() const noexcept {
-    for (rank_type r = 0; r < extents_type::rank(); r++) {
+    for (rank_type r = 0; r != extents_type::rank(); r++) {
       if (extents_.extent(r) > Wrap)
         return false;
     }
@@ -153,7 +153,7 @@ public:
   }
   static constexpr bool is_exhaustive() noexcept { return true; }
   constexpr bool is_strided() const noexcept {
-    for (rank_type r = 0; r < extents_type::rank(); r++) {
+    for (rank_type r = 0; r != extents_type::rank(); r++) {
       if (extents_.extent(r) > Wrap)
         return false;
     }

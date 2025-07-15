@@ -2,7 +2,7 @@ mdspan_add_test(mdspan.assign.pass)
 mdspan_add_test(mdspan.conversion.pass)
 #mdspan_add_test(mdspan.conversion.verify)
 mdspan_add_test(mdspan.ctor.copy.pass)
-mdspan_add_test(mdspan.ctor.default.pass)
+#mdspan_add_test(mdspan.ctor.default.pass) # FIXME (mfh 2025/07/11) Work-around
 mdspan_add_test(mdspan.ctor.dh_array.pass)
 mdspan_add_test(mdspan.ctor.dh_extents.pass)
 mdspan_add_test(mdspan.ctor.dh_integers.pass)

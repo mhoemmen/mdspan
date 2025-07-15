@@ -75,7 +75,7 @@ test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> 
   ASSERT_NOEXCEPT(M::is_always_exhaustive());
   ASSERT_NOEXCEPT(M::is_always_strided());
 
-  for (typename E::rank_type r = 0; r < E::rank(); r++) {
+  for (typename E::rank_type r = 0; r != E::rank(); r++) {
     assert(m.stride(r) == strides[r]);
     assert(c_m.stride(r) == strides[r]);
     ASSERT_NOEXCEPT(m.stride(r));
@@ -83,7 +83,7 @@ test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> 
   }
 
   typename E::index_type expected_size = 1;
-  for (typename E::rank_type r = 0; r < E::rank(); r++) {
+  for (typename E::rank_type r = 0; r != E::rank(); r++) {
     if (ext.extent(r) == 0) {
       expected_size = 0;
       break;

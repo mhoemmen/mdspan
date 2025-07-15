@@ -46,7 +46,7 @@ constexpr void test_construction(E e, S s) {
 
   // check required_span_size()
   typename E::index_type expected_size = 1;
-  for (typename E::rank_type r = 0; r < E::rank(); r++) {
+  for (typename E::rank_type r = 0; r != E::rank(); r++) {
     if (e.extent(r) == 0) {
       expected_size = 0;
       break;

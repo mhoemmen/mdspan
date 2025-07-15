@@ -59,7 +59,7 @@ constexpr void test_conversion(FromE src_exts) {
       // just construct some strides which aren't layout_left/layout_right
       std::array<size_t, FromE::rank()> strides;
       size_t stride = 2;
-      for (size_t r = 0; r < FromE::rank(); r++) {
+      for (size_t r = 0; r != FromE::rank(); r++) {
         strides[r] = stride;
         stride *= src_exts.extent(r);
       }

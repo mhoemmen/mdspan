@@ -22,9 +22,18 @@ static_assert(Kokkos::Experimental::detail::is_layout_left_padded_mapping<
                   Kokkos::extents<size_t, 4, 7>>>::value);
 
 // layout_left_padded must be trivial
-static_assert(std::is_trivial_v<KokkosEx::layout_left_padded<0>>);
-static_assert(std::is_trivial_v<KokkosEx::layout_left_padded<4>>);
-static_assert(std::is_trivial_v<KokkosEx::layout_left_padded<Kokkos::dynamic_extent>>);
+//
+// C++26 deprecates std::is_trivial and std::is_trivial_v.  GCC 15.1.0
+// suggests replacing them with is_trivially_default_constructible_v
+// && is_trivially_copyable_v.
+
+static_assert(std::is_trivially_default_constructible_v<KokkosEx::layout_left_padded<0>>);
+static_assert(std::is_trivially_default_constructible_v<KokkosEx::layout_left_padded<4>>);
+static_assert(std::is_trivially_default_constructible_v<KokkosEx::layout_left_padded<Kokkos::dynamic_extent>>);
+
+static_assert(std::is_trivially_copyable_v<KokkosEx::layout_left_padded<0>>);
+static_assert(std::is_trivially_copyable_v<KokkosEx::layout_left_padded<4>>);
+static_assert(std::is_trivially_copyable_v<KokkosEx::layout_left_padded<Kokkos::dynamic_extent>>);
 
 // actual padding stride
 // If extents_type::rank() equals zero or one, then 0.
