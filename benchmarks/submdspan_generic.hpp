@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <bit>
 #include <chrono>
+#include <exception> // terminate
 #include <iostream>
 #include <memory>
 #include <random>
