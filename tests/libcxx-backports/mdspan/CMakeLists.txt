@@ -18,4 +18,4 @@ mdspan_add_test(mdspan.index_operator.pass)
 mdspan_add_test(mdspan.move.pass)
 mdspan_add_test(mdspan.properties.pass)
 mdspan_add_test(mdspan.swap.pass)
-#mdspan_add_test(mdspan.types.pass) # FIXME (mfh 2025/07/18) Work-around for Clang 21.1.0 + libc++
+mdspan_add_test(mdspan.types.pass)
