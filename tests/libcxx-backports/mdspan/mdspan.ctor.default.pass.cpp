@@ -42,7 +42,10 @@ constexpr void test_mdspan_types(const H&, const M&, const A&) {
 
   if constexpr (MDS::rank_dynamic() > 0 && hc && mc && ac) {
     MDS m;
+    // FIXME (mfh 2025/07/18) Work-around for NVCC + GCC 14.3.0.
+#if ! defined(__CUDACC__)
     static_assert(noexcept(MDS()) == (noexcept(H())&& noexcept(M())&& noexcept(A())));
+#endif
     assert(m.extents() == typename MDS::extents_type());
     if constexpr (std::equality_comparable<H>)
       assert(m.data_handle() == H());
