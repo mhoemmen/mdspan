@@ -103,9 +103,6 @@ public:
 #if !MDSPAN_HAS_CXX_20
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdspan() = default;
 #else
-  // FIXME (mfh 2025/07/11) sum_3d_cuda.cu has a bug that requires this work-around
-  MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdspan() = default;
-#if 0
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdspan()
     requires(
        // nvhpc has a bug where using just rank_dynamic() here doesn't work ...
@@ -114,7 +111,6 @@ public:
        MDSPAN_IMPL_TRAIT(std::is_default_constructible, mapping_type) &&
        MDSPAN_IMPL_TRAIT(std::is_default_constructible, accessor_type)
      ) = default;
-#endif // 0
 #endif
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdspan(const mdspan&) = default;
   MDSPAN_INLINE_FUNCTION_DEFAULTED constexpr mdspan(mdspan&&) = default;

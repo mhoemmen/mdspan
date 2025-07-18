@@ -135,6 +135,12 @@ float run_kernel_timed(size_t N, size_t M, size_t K, F&& f, Args&&... args) {
   return milliseconds;
 }
 
+// NOTE (mfh 2025/07/18) This function violates the preconditions of
+// mdspan because it creates an mdspan with a null pointer, but whose
+// extents have possibly nonzero size.  The whole point is to create a
+// mapping from the input parameter pack, so rather than try to fix
+// this broken function, I'll just rewrite it as
+// fill_device_mdspan_from_mapping (please see below).
 template <class MDSpan, class... DynSizes>
 MDSpan fill_device_mdspan(MDSpan, DynSizes... dyn) {
 
@@ -154,14 +160,36 @@ MDSpan fill_device_mdspan(MDSpan, DynSizes... dyn) {
   return MDSpan{device_buffer, dyn...};
 }
 
+template <class MDSpan, class MappingType>
+MDSpan fill_device_mdspan_from_mapping(const MappingType& mapping) {
+  static_assert(std::is_same_v<typename MDSpan::mapping_type, MappingType>);
+
+  using value_type = typename MDSpan::value_type;
+  auto buffer_size = mapping.required_span_size();
+  auto host_buffer = std::make_unique<value_type[]>(buffer_size);
+  auto host_mdspan = MDSpan{host_buffer.get(), mapping};
+  mdspan_benchmark::fill_random(host_mdspan);
+
+  value_type* device_buffer = nullptr;
+  CUDA_SAFE_CALL(cudaMalloc(&device_buffer, buffer_size * sizeof(value_type)));
+  CUDA_SAFE_CALL(cudaMemcpy(
+    device_buffer, host_buffer.get(), buffer_size * sizeof(value_type), cudaMemcpyHostToDevice
+  ));
+  return MDSpan{device_buffer, mapping};
+}
+
 //================================================================================
 
 template <class MDSpan, class... DynSizes>
 void BM_MDSpan_Cuda_Stencil_3D(benchmark::State& state, MDSpan, DynSizes... dyn) {
 
   using value_type = typename MDSpan::value_type;
-  auto s = fill_device_mdspan(MDSpan{}, dyn...);
-  auto o = fill_device_mdspan(MDSpan{}, dyn...);
+  using extents_type = typename MDSpan::extents_type;
+  using mapping_type = typename MDSpan::mapping_type;
+  mapping_type mapping(extents_type(dyn...));
+
+  auto s = fill_device_mdspan_from_mapping<MDSpan>(mapping);
+  auto o = fill_device_mdspan_from_mapping<MDSpan>(mapping);
 
   idx_t d = static_cast<idx_t>(global_delta);
   int repeats = global_repeat==0? (s.extent(0)*s.extent(1)*s.extent(2) > (100*100*100) ? 50 : 1000) : global_repeat;

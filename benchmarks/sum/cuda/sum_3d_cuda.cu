@@ -145,9 +145,14 @@ float run_kernel_timed(F&& f, Args&&... args) {
   return milliseconds;
 }
 
+// NOTE (mfh 2025/07/18) This function violates the preconditions of
+// mdspan because it creates an mdspan with a null pointer, but whose
+// extents have possibly nonzero size.  The whole point is to create a
+// mapping from the input parameter pack, so rather than try to fix
+// this broken function, I'll just rewrite it as
+// fill_device_mdspan_from_mapping (please see below).
 template <class MDSpan, class... DynSizes>
 MDSpan fill_device_mdspan(MDSpan, DynSizes... dyn) {
-
   using value_type = typename MDSpan::value_type;
   auto buffer_size = MDSpan{nullptr, dyn...}.mapping().required_span_size();
   auto host_buffer = std::make_unique<value_type[]>(
@@ -164,13 +169,35 @@ MDSpan fill_device_mdspan(MDSpan, DynSizes... dyn) {
   return MDSpan{device_buffer, dyn...};
 }
 
+template <class MDSpan, class MappingType>
+MDSpan fill_device_mdspan_from_mapping(const MappingType& mapping) {
+  static_assert(std::is_same_v<typename MDSpan::mapping_type, MappingType>);
+
+  using value_type = typename MDSpan::value_type;
+  auto buffer_size = mapping.required_span_size();
+  auto host_buffer = std::make_unique<value_type[]>(buffer_size);
+  auto host_mdspan = MDSpan{host_buffer.get(), mapping};
+  mdspan_benchmark::fill_random(host_mdspan);
+
+  value_type* device_buffer = nullptr;
+  CUDA_SAFE_CALL(cudaMalloc(&device_buffer, buffer_size * sizeof(value_type)));
+  CUDA_SAFE_CALL(cudaMemcpy(
+    device_buffer, host_buffer.get(), buffer_size * sizeof(value_type), cudaMemcpyHostToDevice
+  ));
+  return MDSpan{device_buffer, mapping};
+}
+
 //================================================================================
 
 template <class MDSpan, class... DynSizes>
 void BM_MDSpan_Cuda_Sum_3D(benchmark::State& state, MDSpan, DynSizes... dyn) {
 
   using value_type = typename MDSpan::value_type;
-  auto s = fill_device_mdspan(MDSpan{}, dyn...);
+  using extents_type = typename MDSpan::extents_type;
+  using mapping_type = typename MDSpan::mapping_type;
+
+  auto s = fill_device_mdspan_from_mapping<MDSpan>(
+    mapping_type(extents_type(dyn...)));
 
   int repeats = s.size() > (100*100*100) ? 50 : 1000;
 
@@ -214,6 +241,11 @@ void BM_Raw_Cuda_Sum_3D_right(benchmark::State& state, T, SizeX x, SizeY y, Size
   value_type* data = nullptr;
   {
     // just for setup...
+    //
+    // NOTE (mfh 2025/07/18) This violates the preconditions of mdspan
+    // because it creates an mdspan with a null pointer, but whose
+    // extents have nonzero size.  To fix this, use
+    // fill_device_mdspan_from_mapping in this file.
     auto wrapped = Kokkos::mdspan<T, Kokkos::dextents<int, 1>>{};
     auto s = fill_device_mdspan(wrapped, x*y*z);
     data = s.data_handle();
@@ -259,6 +291,11 @@ void BM_Raw_Cuda_Sum_3D_left(benchmark::State& state, T, SizeX x, SizeY y, SizeZ
   value_type* data = nullptr;
   {
     // just for setup...
+    //
+    // NOTE (mfh 2025/07/18) This violates the preconditions of mdspan
+    // because it creates an mdspan with a null pointer, but whose
+    // extents have nonzero size.  To fix this, use
+    // fill_device_mdspan_from_mapping in this file.
     auto wrapped = Kokkos::mdspan<T, Kokkos::dextents<int, 1>>{};
     auto s = fill_device_mdspan(wrapped, x*y*z);
     data = s.data_handle();
