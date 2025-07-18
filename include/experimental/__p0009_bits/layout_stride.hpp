@@ -32,6 +32,16 @@
 #ifdef __cpp_lib_span
 #include <span>
 #endif
+
+#if defined(MDSPAN_HAS_CXX_20)
+// __cpp_lib_concepts won't be defined unless <version> is included.
+#  include <version>
+
+#  if ! defined(__cpp_lib_concepts)
+#    error "MDSPAN_HAS_CXX_20 is defined, but __cpp_lib_concepts is not."
+#  endif
+#endif
+
 #if defined(MDSPAN_IMPL_USE_CONCEPTS) && MDSPAN_HAS_CXX_20 && defined(__cpp_lib_concepts)
 #  include <concepts>
 #endif
@@ -73,7 +83,7 @@ namespace detail {
     { M::is_always_unique() } -> std::same_as<bool>;
 #else
     { M::is_always_strided() } -> internal::same_as<bool>;
-    { M::is_always_exhaustive() } -> internal::_ame_as<bool>;
+    { M::is_always_exhaustive() } -> internal::same_as<bool>;
     { M::is_always_unique() } -> internal::same_as<bool>;
 #endif
     std::bool_constant<M::is_always_strided()>::value;
