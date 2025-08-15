@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <bit>
 #include <chrono>
-#include <exception> // terminate
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <random>
@@ -63,7 +63,11 @@ get_broadcast_element(
   const Kokkos::mdspan<ElementType, Kokkos::extents<IndexType, Exts...>, Layout, Accessor>& x,
   typename Kokkos::extents<IndexType, Exts...>::index_type broadcast_index)
 {
-  return x[((void) Exts, broadcast_index)...];
+#if defined(MDSPAN_USE_PAREN_OPERATOR) && (MDSPAN_USE_PAREN_OPERATOR != 0)
+  return x(((void) Exts, broadcast_index)...);
+#else
+  return x[((void) Exts, broadcast_index)...];  
+#endif
 }
 
 #endif
@@ -109,29 +113,73 @@ allocate_buffer(host_execution_space, size_t num_elements) {
   return std::make_unique<ValueType[]>(num_elements);
 }
 
-template <class IndexType, size_t... Exts>
-void fill_with_random_values(
-  host_execution_space,
-  random_state_t& state,
-  nonconst_test_mdspan<IndexType, Exts...> s)
+template<class ValueType>
+requires(std::is_trivially_copyable_v<ValueType>)
+void
+copy_buffer(host_execution_space, const ValueType in[], ValueType out[], std::size_t num_elements)
 {
-  auto val_dist = std::uniform_int_distribution<std::uint8_t>(0u, 255u);
-  auto next = [&] () {
-    return val_dist(state.generator());
-  };
-  std::generate(s.data_handle(), s.data_handle() + s.size(), next);
+  (void) std::memcpy(out, in, num_elements * sizeof(ValueType));
 }
 
 template<class ExecutionSpace, class IndexType, size_t... Exts>
 class benchmark_buffer {
+private:
+  static constexpr bool is_host =
+    std::is_same_v<ExecutionSpace, host_execution_space>;
+  
 public:
   using value_type = std::uint8_t;
 
   benchmark_buffer(ExecutionSpace exec_space, Kokkos::extents<IndexType, Exts...> exts) :
+    exec_space_{exec_space},
     mapping_{exts},
     buffer_{allocate_buffer<value_type>(exec_space, mapping_.required_span_size())}
-  {}
+  {
+    if constexpr (! is_host) {
+      host_buffer_ = allocate_buffer<value_type>(
+        host_execution_space{}, mapping_.required_span_size());
+    }
+  }
 
+  friend void copy(const benchmark_buffer& src, benchmark_buffer& dst) {
+    if (&dst != &src) {
+      if (src.size() != dst.size()) {
+        throw std::runtime_error("benchmark_buffer::copy: src.size() != dst.size()");
+      }
+      if constexpr (! is_host) {
+        copy_buffer(dst.exec_space_, src.host_buffer_.get(), dst.host_buffer_.get(), dst.size());
+      }
+      copy_buffer(dst.exec_space_, src.buffer_.get(), dst.buffer_.get(), dst.size());
+    }
+  }
+
+  benchmark_buffer(const benchmark_buffer& rhs) :
+    exec_space_{rhs.exec_space_},
+    mapping_{rhs.mapping_},
+    buffer_{allocate_buffer<value_type>(rhs.exec_space_, mapping_.required_span_size())}
+  {
+    if constexpr (! is_host) {
+      host_buffer_ = allocate_buffer<value_type>(
+        host_execution_space{}, mapping_.required_span_size());
+    }
+    copy(rhs, *this);
+  }
+
+  benchmark_buffer& operator=(const benchmark_buffer& rhs) {
+    if (this != &rhs) {
+      exec_space_ = rhs.exec_space_;
+      mapping_ = rhs.mapping_;
+      buffer_ = allocate_buffer<value_type>(rhs.exec_space_, mapping_.required_span_size());
+
+      if constexpr (! is_host) {
+        host_buffer_ = allocate_buffer<value_type>(
+          host_execution_space{}, mapping_.required_span_size());
+      }
+      copy(rhs, *this);
+    }
+    return *this;
+  }
+  
   size_t size() const {
     return mapping_.required_span_size();
   }
@@ -144,10 +192,57 @@ public:
     return {static_cast<const value_type*>(buffer_.get()), mapping_};
   }
 
+  void sync_to_device() {
+    if constexpr (! is_host) {
+      copy_buffer(exec_space_, host_buffer_.get(), buffer_.get(), size());
+    }
+  }
+
+  void sync_to_host() {
+    if constexpr (! is_host) {
+      copy_buffer(exec_space_, buffer_.get(), host_buffer_.get(), size());
+    }
+  }
+
+  nonconst_test_mdspan<IndexType, Exts...> get_host_mdspan() {
+    if constexpr (is_host) {
+      return {buffer_.get(), mapping_};
+    }
+    else {
+      return {host_buffer_.get(), mapping_};
+    }
+  }
+
+  const_test_mdspan<IndexType, Exts...> get_host_mdspan() const {
+    if constexpr (is_host) {
+      return {static_cast<const value_type*>(buffer_.get()), mapping_};
+    }
+    else {
+      return {static_cast<const value_type*>(host_buffer_.get()), mapping_};
+    }
+  }
+  
 private:
+  ExecutionSpace exec_space_{};
   Kokkos::layout_right::template mapping<Kokkos::extents<IndexType, Exts...>> mapping_;
   std::unique_ptr<value_type[], array_deleter_t<ExecutionSpace, value_type>> buffer_;
+  std::unique_ptr<value_type[], array_deleter_t<host_execution_space, value_type>> host_buffer_;
 };
+
+template <class ExecutionSpace, class IndexType, size_t... Exts>
+void fill_with_random_values(
+  ExecutionSpace exec,
+  random_state_t& state,
+  benchmark_buffer<ExecutionSpace, IndexType, Exts...>& s)
+{
+  auto val_dist = std::uniform_int_distribution<std::uint8_t>(0u, 255u);
+  auto next = [&] () {
+    return val_dist(state.generator());
+  };
+  auto s_host = s.get_host_mdspan();
+  std::generate(s_host.data_handle(), s_host.data_handle() + s.size(), next);
+  s.sync_to_device();
+}
 
 template<class ExecutionSpace, class IndexType, size_t... Exts>
 size_t benchmark1_impl(ExecutionSpace /* exec_space */,
@@ -162,12 +257,13 @@ void benchmark1(ExecutionSpace exec_space,
 {
   random_state_t random_state{};
   auto buf = benchmark_buffer{exec_space, exts};
-  fill_with_random_values(exec_space, random_state, buf.get_mdspan());
+  fill_with_random_values(exec_space, random_state, buf);
 
   size_t count_not_same = benchmark1_impl(exec_space, state, buf.get_mdspan());
   if (count_not_same != 0) {
-    std::cerr << "benchmark1 failed: count not same = " << count_not_same << std::endl;
-    std::terminate();
+    std::ostringstream os;
+    os << "benchmark1 failed: count_not_same=" << count_not_same << "\n";
+    throw std::runtime_error(os.str());
   }
 
   auto buf_0s_after = get_broadcast_element(buf.get_mdspan(), 0);
@@ -191,7 +287,7 @@ public:
     return *this;
   }
 #if defined(__cpp_impl_three_way_comparison)
-  constexpr MDSPAN_FUNCTION auto operator<=>(const index_holder&) const noexcept = default;
+  constexpr /* MDSPAN_FUNCTION */ auto operator<=>(const index_holder&) const noexcept = default;
 #else
   friend constexpr MDSPAN_FUNCTION bool operator<(const index_holder& x, const index_holder& y) noexcept {
     return x.i_ < y.i_;
@@ -273,6 +369,78 @@ expected_element(size_t original_element, size_t count) {
   constexpr size_t base = 3u;
   constexpr size_t modulus = 256u;
   return ((original_element % modulus) * base_to_the_exponent_mod_modulus(base, count, modulus)) % modulus;
+}
+
+// Multiply elements by 3, using 1-D slices.
+template<class ExecutionSpace,
+  class IndexType, size_t... Exts,
+  class Layout>
+MDSPAN_INLINE_FUNCTION void benchmark2_loop(ExecutionSpace exec_space,
+  Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out)
+{
+  using mdspan_type = Kokkos::mdspan<std::uint8_t,
+    Kokkos::extents<IndexType, Exts...>, Layout>;
+
+  if constexpr (mdspan_type::rank() == 0) {
+    return;
+  }
+  else if constexpr (mdspan_type::rank() == 1) {
+    const IndexType ext0 = out.extent(0);
+    for (IndexType k = 0; k < ext0; ++k) {
+      out[k] *= 3u;
+    }
+  }
+  else {
+    const auto ext0 = index_holder{out.extent(0)};
+    for (auto k = index_holder{IndexType(0)}; k < ext0; ++k) {
+      benchmark2_loop(exec_space, slice_one_extent(out, k));
+    }
+  }
+}
+
+template<class IndexType, size_t... Exts>
+size_t benchmark2_impl(host_execution_space exec_space,
+  benchmark::State& state,
+  nonconst_test_mdspan<IndexType, Exts...> out)
+{
+  size_t count = 0;
+  for (auto _ : state) {
+    benchmark2_loop(exec_space, out);
+    ++count;
+  }
+  benchmark::DoNotOptimize(count);
+  return count;
+}
+
+template<class ExecutionSpace, class IndexType, size_t... Exts>
+void benchmark2(ExecutionSpace exec_space,
+  benchmark::State& state,
+  Kokkos::extents<IndexType, Exts...> exts)
+{
+  auto in_buf = benchmark_buffer{exec_space, exts};
+  random_state_t random_state{};
+  fill_with_random_values(exec_space, random_state, in_buf);
+  auto out_buf = benchmark_buffer{in_buf}; // deep copy
+
+  const size_t count = benchmark2_impl(exec_space, state, out_buf.get_mdspan());
+  {
+    in_buf.sync_to_host();
+    out_buf.sync_to_host();
+    auto in = in_buf.get_host_mdspan().data_handle();
+    auto out = out_buf.get_host_mdspan().data_handle();
+    const size_t num_elements = in_buf.size();
+    for (size_t i = 0; i < num_elements; ++i) {
+      const auto original = in[i];
+      const auto expected = expected_element(original, count);
+      if (out[i] != expected) {
+        std::ostringstream os;
+        os << "benchmark2 failed: out[" << i << "] = "
+           << static_cast<unsigned>(out[i]) << " != "
+           << expected << "\n";
+        throw std::runtime_error(os.str());
+      }
+    }
+  }
 }
 
 } // namespace submdspan_benchmark
