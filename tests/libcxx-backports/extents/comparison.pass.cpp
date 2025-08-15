@@ -24,54 +24,62 @@
 
 #include "../llvm_test_macros.h"
 
+template<class A, class B, class C>
+struct test_comparison_result {
+  A equal;
+  B dest;
+  C src;
+};
+
 template <class To, class From>
-constexpr void test_comparison(bool equal, To dest, From src) {
+constexpr auto test_comparison(bool equal, To dest, From src) {
   ASSERT_NOEXCEPT(dest == src);
   assert((dest == src) == equal);
   assert((dest != src) == !equal);
+  return test_comparison_result{equal, dest, src};
 }
 
 template <class T1, class T2>
 constexpr void test_comparison_different_rank() {
   constexpr size_t D = std::dynamic_extent;
 
-  test_comparison(false, std::extents<T1>(), std::extents<T2, D>(1));
-  test_comparison(false, std::extents<T1>(), std::extents<T2, 1>());
+  (void) test_comparison(false, std::extents<T1>(), std::extents<T2, D>(1));
+  (void) test_comparison(false, std::extents<T1>(), std::extents<T2, 1>());
 
-  test_comparison(false, std::extents<T1, D>(1), std::extents<T2>());
-  test_comparison(false, std::extents<T1, 1>(), std::extents<T2>());
+  (void) test_comparison(false, std::extents<T1, D>(1), std::extents<T2>());
+  (void) test_comparison(false, std::extents<T1, 1>(), std::extents<T2>());
 
-  test_comparison(false, std::extents<T1, D>(5), std::extents<T2, D, D>(5, 5));
-  test_comparison(false, std::extents<T1, 5>(), std::extents<T2, 5, D>(5));
-  test_comparison(false, std::extents<T1, 5>(), std::extents<T2, 5, 1>());
+  (void) test_comparison(false, std::extents<T1, D>(5), std::extents<T2, D, D>(5, 5));
+  (void) test_comparison(false, std::extents<T1, 5>(), std::extents<T2, 5, D>(5));
+  (void) test_comparison(false, std::extents<T1, 5>(), std::extents<T2, 5, 1>());
 
-  test_comparison(false, std::extents<T1, D, D>(5, 5), std::extents<T2, D>(5));
-  test_comparison(false, std::extents<T1, 5, D>(5), std::extents<T2, D>(5));
-  test_comparison(false, std::extents<T1, 5, 5>(), std::extents<T2, 5>());
+  (void) test_comparison(false, std::extents<T1, D, D>(5, 5), std::extents<T2, D>(5));
+  (void) test_comparison(false, std::extents<T1, 5, D>(5), std::extents<T2, D>(5));
+  (void) test_comparison(false, std::extents<T1, 5, 5>(), std::extents<T2, 5>());
 }
 
 template <class T1, class T2>
 constexpr void test_comparison_same_rank() {
   constexpr size_t D = std::dynamic_extent;
 
-  test_comparison(true, std::extents<T1>(), std::extents<T2>());
+  (void) test_comparison(true, std::extents<T1>(), std::extents<T2>());
 
-  test_comparison(true, std::extents<T1, D>(5), std::extents<T2, D>(5));
-  test_comparison(true, std::extents<T1, 5>(), std::extents<T2, D>(5));
-  test_comparison(true, std::extents<T1, D>(5), std::extents<T2, 5>());
-  test_comparison(true, std::extents<T1, 5>(), std::extents< T2, 5>());
-  test_comparison(false, std::extents<T1, D>(5), std::extents<T2, D>(7));
-  test_comparison(false, std::extents<T1, 5>(), std::extents<T2, D>(7));
-  test_comparison(false, std::extents<T1, D>(5), std::extents<T2, 7>());
-  test_comparison(false, std::extents<T1, 5>(), std::extents<T2, 7>());
+  (void) test_comparison(true, std::extents<T1, D>(5), std::extents<T2, D>(5));
+  (void) test_comparison(true, std::extents<T1, 5>(), std::extents<T2, D>(5));
+  (void) test_comparison(true, std::extents<T1, D>(5), std::extents<T2, 5>());
+  (void) test_comparison(true, std::extents<T1, 5>(), std::extents< T2, 5>());
+  (void) test_comparison(false, std::extents<T1, D>(5), std::extents<T2, D>(7));
+  (void) test_comparison(false, std::extents<T1, 5>(), std::extents<T2, D>(7));
+  (void) test_comparison(false, std::extents<T1, D>(5), std::extents<T2, 7>());
+  (void) test_comparison(false, std::extents<T1, 5>(), std::extents<T2, 7>());
 
-  test_comparison(true, std::extents<T1, D, D, D, D, D>(5, 6, 7, 8, 9), std::extents<T2, D, D, D, D, D>(5, 6, 7, 8, 9));
-  test_comparison(true, std::extents<T1, D, 6, D, 8, D>(5, 7, 9), std::extents<T2, 5, D, D, 8, 9>(6, 7));
-  test_comparison(true, std::extents<T1, 5, 6, 7, 8, 9>(5, 6, 7, 8, 9), std::extents<T2, 5, 6, 7, 8, 9>());
-  test_comparison(
+  (void) test_comparison(true, std::extents<T1, D, D, D, D, D>(5, 6, 7, 8, 9), std::extents<T2, D, D, D, D, D>(5, 6, 7, 8, 9));
+  (void) test_comparison(true, std::extents<T1, D, 6, D, 8, D>(5, 7, 9), std::extents<T2, 5, D, D, 8, 9>(6, 7));
+  (void) test_comparison(true, std::extents<T1, 5, 6, 7, 8, 9>(5, 6, 7, 8, 9), std::extents<T2, 5, 6, 7, 8, 9>());
+  (void) test_comparison(
       false, std::extents<T1, D, D, D, D, D>(5, 6, 7, 8, 9), std::extents<T2, D, D, D, D, D>(5, 6, 3, 8, 9));
-  test_comparison(false, std::extents<T1, D, 6, D, 8, D>(5, 7, 9), std::extents<T2, 5, D, D, 3, 9>(6, 7));
-  test_comparison(false, std::extents<T1, 5, 6, 7, 8, 9>(5, 6, 7, 8, 9), std::extents<T2, 5, 6, 7, 3, 9>());
+  (void) test_comparison(false, std::extents<T1, D, 6, D, 8, D>(5, 7, 9), std::extents<T2, 5, D, D, 3, 9>(6, 7));
+  (void) test_comparison(false, std::extents<T1, 5, 6, 7, 8, 9>(5, 6, 7, 8, 9), std::extents<T2, 5, 6, 7, 3, 9>());
 }
 
 template <class T1, class T2>

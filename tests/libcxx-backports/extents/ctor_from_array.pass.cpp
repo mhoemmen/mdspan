@@ -71,7 +71,7 @@ int main(int, char**) {
   static_assert(!std::is_constructible_v<E, std::array<int, 5>>, "extents constructible from illegal arguments");
 
   // test implicit construction fails from span and array if all extents are given
-  std::array a5{3, 4, 5, 6, 7};
+  [[maybe_unused]] std::array a5{3, 4, 5, 6, 7};
   // check that explicit construction works, i.e. no error
   static_assert(std::is_constructible_v< std::extents<int, D, D, 5, D, D>, decltype(a5)>,
                 "extents unexpectectly not constructible");
