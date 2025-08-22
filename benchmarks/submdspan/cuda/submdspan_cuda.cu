@@ -85,26 +85,29 @@ copy_buffer(cuda_execution_space, const ValueType in[], ValueType out[], std::si
 template<class IndexType, class Layout, std::size_t... Exts>
 __global__ void
 benchmark2_loop_kernel(
-  Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out)
+  Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out,
+  size_t inner_count)
 {
-  benchmark2_loop(cuda_execution_space{}, out);
+  for (size_t c = 0; c < inner_count; ++c) {
+    benchmark2_loop(cuda_execution_space{}, out);
+  }
 }
 
 template<class IndexType, size_t... Exts>
 size_t benchmark2_impl(cuda_execution_space exec_space,
   benchmark::State& state,
-  nonconst_test_mdspan<IndexType, Exts...> out)
+  nonconst_test_mdspan<IndexType, Exts...> out,
+  size_t inner_count)
 {
   cudaEvent_t start, stop;
   CUDA_SAFE_CALL(cudaEventCreate(&start));
   CUDA_SAFE_CALL(cudaEventCreate(&stop));
   
   size_t count = 0;
-
   CUDA_SAFE_CALL(cudaEventRecord(start));  
   for (auto _ : state) {
-    benchmark2_loop_kernel<<< 1, 1 >>>(out);
-    ++count;
+    benchmark2_loop_kernel<<< 1, 1 >>>(out, inner_count);
+    count += inner_count;
   }
   CUDA_SAFE_CALL(cudaEventRecord(stop));
   CUDA_SAFE_CALL(cudaEventSynchronize(stop));

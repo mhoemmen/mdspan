@@ -375,7 +375,8 @@ expected_element(size_t original_element, size_t count) {
 template<class ExecutionSpace,
   class IndexType, size_t... Exts,
   class Layout>
-MDSPAN_INLINE_FUNCTION void benchmark2_loop(ExecutionSpace exec_space,
+MDSPAN_INLINE_FUNCTION void
+benchmark2_loop(ExecutionSpace exec_space,
   Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out)
 {
   using mdspan_type = Kokkos::mdspan<std::uint8_t,
@@ -401,12 +402,15 @@ MDSPAN_INLINE_FUNCTION void benchmark2_loop(ExecutionSpace exec_space,
 template<class IndexType, size_t... Exts>
 size_t benchmark2_impl(host_execution_space exec_space,
   benchmark::State& state,
-  nonconst_test_mdspan<IndexType, Exts...> out)
+  nonconst_test_mdspan<IndexType, Exts...> out,
+  size_t inner_count)
 {
   size_t count = 0;
   for (auto _ : state) {
-    benchmark2_loop(exec_space, out);
-    ++count;
+    for (size_t c = 0; c < inner_count; ++c) {
+      benchmark2_loop(exec_space, out);
+    }
+    count += inner_count;
   }
   benchmark::DoNotOptimize(count);
   return count;
@@ -415,14 +419,15 @@ size_t benchmark2_impl(host_execution_space exec_space,
 template<class ExecutionSpace, class IndexType, size_t... Exts>
 void benchmark2(ExecutionSpace exec_space,
   benchmark::State& state,
-  Kokkos::extents<IndexType, Exts...> exts)
+  Kokkos::extents<IndexType, Exts...> exts,
+  size_t inner_count = 100u)
 {
   auto in_buf = benchmark_buffer{exec_space, exts};
   random_state_t random_state{};
   fill_with_random_values(exec_space, random_state, in_buf);
   auto out_buf = benchmark_buffer{in_buf}; // deep copy
 
-  const size_t count = benchmark2_impl(exec_space, state, out_buf.get_mdspan());
+  const size_t count = benchmark2_impl(exec_space, state, out_buf.get_mdspan(), inner_count);
   {
     in_buf.sync_to_host();
     out_buf.sync_to_host();
