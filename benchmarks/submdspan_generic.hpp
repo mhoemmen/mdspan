@@ -244,32 +244,6 @@ void fill_with_random_values(
   s.sync_to_device();
 }
 
-template<class ExecutionSpace, class IndexType, size_t... Exts>
-size_t benchmark1_impl(ExecutionSpace /* exec_space */,
-  benchmark::State& state,
-  nonconst_test_mdspan<IndexType, Exts...> out);
-
-// This works for host_execution_space and cuda_execution_space.
-template<class ExecutionSpace, class IndexType, size_t... Exts>
-void benchmark1(ExecutionSpace exec_space,
-  benchmark::State& state,
-  Kokkos::extents<IndexType, Exts...> exts)
-{
-  random_state_t random_state{};
-  auto buf = benchmark_buffer{exec_space, exts};
-  fill_with_random_values(exec_space, random_state, buf);
-
-  size_t count_not_same = benchmark1_impl(exec_space, state, buf.get_mdspan());
-  if (count_not_same != 0) {
-    std::ostringstream os;
-    os << "benchmark1 failed: count_not_same=" << count_not_same << "\n";
-    throw std::runtime_error(os.str());
-  }
-
-  auto buf_0s_after = get_broadcast_element(buf.get_mdspan(), 0);
-  benchmark::DoNotOptimize(buf_0s_after);
-}
-
 // Index or slice type that's convertible to IndexType,
 // but neither integral nor integral-constant-like.
 MDSPAN_TEMPLATE_REQUIRES(
