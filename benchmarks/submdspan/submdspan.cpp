@@ -28,4 +28,16 @@ BENCHMARK_CAPTURE(host_benchmark2, int_6d, (Kokkos::dextents<int, 6>{2, 2, 2, 2,
 BENCHMARK_CAPTURE(host_benchmark2, size_t_6d, (Kokkos::extents<size_t, 2, 2, 2, 2, 2, 2>{}));
 BENCHMARK_CAPTURE(host_benchmark2, size_t_6d, (Kokkos::dextents<size_t, 6>{2, 2, 2, 2, 2, 2}));
 
+template<class IndexType, size_t... Exts>
+void host_benchmark3(benchmark::State& state,
+  Kokkos::extents<IndexType, Exts...> exts)
+{
+  return submdspan_benchmark::benchmark3(submdspan_benchmark::host_execution_space{}, state, exts);
+}
+
+BENCHMARK_CAPTURE(host_benchmark3, int_6d, (Kokkos::extents<int, 2, 2, 2, 2, 2, 2>{}));
+BENCHMARK_CAPTURE(host_benchmark3, int_6d, (Kokkos::dextents<int, 6>{2, 2, 2, 2, 2, 2}));
+BENCHMARK_CAPTURE(host_benchmark3, size_t_6d, (Kokkos::extents<size_t, 2, 2, 2, 2, 2, 2>{}));
+BENCHMARK_CAPTURE(host_benchmark3, size_t_6d, (Kokkos::dextents<size_t, 6>{2, 2, 2, 2, 2, 2}));
+
 BENCHMARK_MAIN();

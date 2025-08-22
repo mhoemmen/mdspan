@@ -66,7 +66,7 @@ get_broadcast_element(
 #if defined(MDSPAN_USE_PAREN_OPERATOR) && (MDSPAN_USE_PAREN_OPERATOR != 0)
   return x(((void) Exts, broadcast_index)...);
 #else
-  return x[((void) Exts, broadcast_index)...];  
+  return x[((void) Exts, broadcast_index)...];
 #endif
 }
 
@@ -126,7 +126,7 @@ class benchmark_buffer {
 private:
   static constexpr bool is_host =
     std::is_same_v<ExecutionSpace, host_execution_space>;
-  
+
 public:
   using value_type = std::uint8_t;
 
@@ -179,7 +179,7 @@ public:
     }
     return *this;
   }
-  
+
   size_t size() const {
     return mapping_.required_span_size();
   }
@@ -221,7 +221,7 @@ public:
       return {static_cast<const value_type*>(host_buffer_.get()), mapping_};
     }
   }
-  
+
 private:
   ExecutionSpace exec_space_{};
   Kokkos::layout_right::template mapping<Kokkos::extents<IndexType, Exts...>> mapping_;
@@ -307,6 +307,78 @@ constexpr MDSPAN_FUNCTION auto slice_one_extent(
   }
 }
 
+template<size_t Ext, class IndexType>
+constexpr MDSPAN_INLINE_FUNCTION auto
+make_unit_stride_slice(IndexType ext) {
+#if defined(__CUDA_ARCH__)
+  using cuda::std::pair;
+  using cuda::std::integral_constant;
+#else
+  using std::pair;
+  using std::integral_constant;
+#endif
+  using index_type = std::remove_cvref_t<IndexType>;
+
+  if constexpr (Ext == Kokkos::dynamic_extent) {
+    return pair<index_type, index_type>(0, ext);
+  }
+  else {
+    return pair{
+      integral_constant<IndexType, 0>{},
+      integral_constant<IndexType, Ext>{}
+    };
+  }
+}
+
+template<class ElementType,
+         class Layout,
+         class Accessor,
+         class SingleIndexSlice,
+         class IndexType, size_t... Exts> // parameter pack must be last
+constexpr MDSPAN_FUNCTION auto
+slice_one_extent_3(
+  Kokkos::mdspan<ElementType, Kokkos::extents<IndexType, Exts...>, Layout, Accessor> x,
+  SingleIndexSlice row)
+{
+  constexpr size_t rank = sizeof...(Exts);
+  if constexpr (rank == 0) {
+#if defined(MDSPAN_CONSTANT_WRAPPER_WORKAROUND)
+    static_assert(sizeof...(Exts) != 0, "slice_one_extent_3 called with no extents");
+#else
+    static_assert(false, "slice_one_extent_3 called with no extents");
+#endif
+  }
+  else if constexpr (rank == 1) {
+    return Kokkos::submdspan(x, row);
+  }
+  else if constexpr (rank == 2) {
+    // In order for submdspan given rank-2 layout_right or
+    // layout_right_padded to return layout_right_padded, the slices
+    // need to look like this: (k, unit_stride_slice).
+    using x_type = decltype(x);
+    return Kokkos::submdspan(x, row,
+      make_unit_stride_slice<x_type::static_extent(1)>(x.extent(1)));
+  }
+  else {
+    // In order for submdspan given layout_right or
+    // layout_right_padded to return layout_right_padded, the slices
+    // need to look like this:
+    //
+    // (k, unit_stride_slice, full_extent, ..., full_extent, unit_stride_slice)
+    //
+    // with rank-3 total instances of full_extent.
+    constexpr size_t num_full_extents = rank - 3u;
+    return [&] <size_t... Inds> (std::index_sequence<Inds...>) {
+      using x_type = decltype(x);
+      return Kokkos::submdspan(x, row,
+        make_unit_stride_slice<x_type::static_extent(1)>(x.extent(1)),
+        ((void) Inds, full_extent_wrapper_t{})...,
+        make_unit_stride_slice<x_type::static_extent(rank - 1)>(x.extent(rank - 1))
+      );
+    } (std::make_index_sequence<num_full_extents>());
+  }
+}
+
 // Elements of x are uint8_t, so computations happen modulo 256.
 // For each element x_e of x, on output, result is
 //
@@ -373,6 +445,43 @@ benchmark2_loop(ExecutionSpace exec_space,
   }
 }
 
+template<class T>
+inline constexpr bool is_layout_right_padded_v = false;
+
+template<size_t PaddingStride>
+inline constexpr bool is_layout_right_padded_v<
+  Kokkos::Experimental::layout_right_padded<PaddingStride>> = true;
+
+// Multiply elements by 3, using 1-D slices.
+template<class ExecutionSpace,
+  class IndexType, size_t... Exts,
+  class Layout>
+MDSPAN_INLINE_FUNCTION void
+benchmark3_loop(ExecutionSpace exec_space,
+  Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out)
+{
+  static_assert(std::is_same_v<Layout, Kokkos::layout_right> ||
+    is_layout_right_padded_v<Layout>);
+  using mdspan_type = Kokkos::mdspan<std::uint8_t,
+    Kokkos::extents<IndexType, Exts...>, Layout>;
+
+  if constexpr (mdspan_type::rank() == 0) {
+    return;
+  }
+  else if constexpr (mdspan_type::rank() == 1) {
+    const IndexType ext0 = out.extent(0);
+    for (IndexType k = 0; k < ext0; ++k) {
+      out[k] *= 3u;
+    }
+  }
+  else {
+    const auto ext0 = index_holder{out.extent(0)};
+    for (auto k = index_holder{IndexType(0)}; k < ext0; ++k) {
+      benchmark3_loop(exec_space, slice_one_extent_3(out, k));
+    }
+  }
+}
+
 template<class IndexType, size_t... Exts>
 size_t benchmark2_impl(host_execution_space exec_space,
   benchmark::State& state,
@@ -383,6 +492,23 @@ size_t benchmark2_impl(host_execution_space exec_space,
   for (auto _ : state) {
     for (size_t c = 0; c < inner_count; ++c) {
       benchmark2_loop(exec_space, out);
+    }
+    count += inner_count;
+  }
+  benchmark::DoNotOptimize(count);
+  return count;
+}
+
+template<class Layout, class IndexType, size_t... Exts>
+size_t benchmark3_impl(host_execution_space exec_space,
+  benchmark::State& state,
+  Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out,
+  size_t inner_count)
+{
+  size_t count = 0;
+  for (auto _ : state) {
+    for (size_t c = 0; c < inner_count; ++c) {
+      benchmark3_loop(exec_space, out);
     }
     count += inner_count;
   }
@@ -414,6 +540,38 @@ void benchmark2(ExecutionSpace exec_space,
       if (out[i] != expected) {
         std::ostringstream os;
         os << "benchmark2 failed: out[" << i << "] = "
+           << static_cast<unsigned>(out[i]) << " != "
+           << expected << "\n";
+        throw std::runtime_error(os.str());
+      }
+    }
+  }
+}
+
+template<class ExecutionSpace, class IndexType, size_t... Exts>
+void benchmark3(ExecutionSpace exec_space,
+  benchmark::State& state,
+  Kokkos::extents<IndexType, Exts...> exts,
+  size_t inner_count = 100u)
+{
+  auto in_buf = benchmark_buffer{exec_space, exts};
+  random_state_t random_state{};
+  fill_with_random_values(exec_space, random_state, in_buf);
+  auto out_buf = benchmark_buffer{in_buf}; // deep copy
+
+  const size_t count = benchmark3_impl(exec_space, state, out_buf.get_mdspan(), inner_count);
+  {
+    in_buf.sync_to_host();
+    out_buf.sync_to_host();
+    auto in = in_buf.get_host_mdspan().data_handle();
+    auto out = out_buf.get_host_mdspan().data_handle();
+    const size_t num_elements = in_buf.size();
+    for (size_t i = 0; i < num_elements; ++i) {
+      const auto original = in[i];
+      const auto expected = expected_element(original, count);
+      if (out[i] != expected) {
+        std::ostringstream os;
+        os << "benchmark3 failed: out[" << i << "] = "
            << static_cast<unsigned>(out[i]) << " != "
            << expected << "\n";
         throw std::runtime_error(os.str());
