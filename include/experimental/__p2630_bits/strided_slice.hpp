@@ -20,6 +20,8 @@
 #include "../__p0009_bits/macros.hpp"
 #if defined(MDSPAN_ENABLE_P3663)
 #  include "constant_wrapper.hpp"
+#elif defined(__CUDACC__)
+#  include <cuda/std/type_traits> // cuda::std::integral_constant
 #endif
 
 #include <type_traits>
@@ -48,6 +50,16 @@ namespace { // (anonymous)
   // NOTE Does this mean existing code is not conforming?
   template<class T, T val>
   struct mdspan_is_integral_constant<std::integral_constant<T,val>>: std::true_type {};
+
+#  if defined(__CUDACC__)
+
+  template<class T, T val>
+  struct mdspan_is_integral_constant<
+      cuda::std::integral_constant<T,val>
+    > : std::true_type {};
+
+#  endif // __CUDACC__
+
 #endif
 
   template<class T>
