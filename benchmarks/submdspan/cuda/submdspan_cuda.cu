@@ -93,6 +93,17 @@ benchmark2_loop_kernel(
   }
 }
 
+template<class IndexType, class Layout, std::size_t... Exts>
+__global__ void
+benchmark3_loop_kernel(
+  Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out,
+  size_t inner_count)
+{
+  for (size_t c = 0; c < inner_count; ++c) {
+    benchmark3_loop(cuda_execution_space{}, out);
+  }
+}
+
 template<class IndexType, size_t... Exts>
 size_t benchmark2_impl(cuda_execution_space exec_space,
   benchmark::State& state,
@@ -119,6 +130,32 @@ size_t benchmark2_impl(cuda_execution_space exec_space,
   return count;
 }
 
+template<class Layout, class IndexType, size_t... Exts>
+size_t benchmark3_impl(cuda_execution_space exec_space,
+  benchmark::State& state,
+  Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out,
+  size_t inner_count)
+{
+  cudaEvent_t start, stop;
+  CUDA_SAFE_CALL(cudaEventCreate(&start));
+  CUDA_SAFE_CALL(cudaEventCreate(&stop));
+  
+  size_t count = 0;
+  CUDA_SAFE_CALL(cudaEventRecord(start));  
+  for (auto _ : state) {
+    benchmark3_loop_kernel<<< 1, 1 >>>(out, inner_count);
+    count += inner_count;
+  }
+  CUDA_SAFE_CALL(cudaEventRecord(stop));
+  CUDA_SAFE_CALL(cudaEventSynchronize(stop));
+  float milliseconds = 0;
+  CUDA_SAFE_CALL(cudaEventElapsedTime(&milliseconds, start, stop));
+
+  std::cout << "Count: " << count << "\nTime (ms): " << milliseconds << "\n";
+  benchmark::DoNotOptimize(count);
+  return count;
+}
+
 } // namespace submdspan_benchmark
 
 template<class IndexType, size_t... Exts>
@@ -132,6 +169,18 @@ BENCHMARK_CAPTURE(cuda_benchmark2, int_6d, (Kokkos::extents<int, 2, 2, 2, 2, 2, 
 BENCHMARK_CAPTURE(cuda_benchmark2, int_6d, (Kokkos::dextents<int, 6>{2, 2, 2, 2, 2, 2}));
 BENCHMARK_CAPTURE(cuda_benchmark2, size_t_6d, (Kokkos::extents<size_t, 2, 2, 2, 2, 2, 2>{}));
 BENCHMARK_CAPTURE(cuda_benchmark2, size_t_6d, (Kokkos::dextents<size_t, 6>{2, 2, 2, 2, 2, 2}));
+
+template<class IndexType, size_t... Exts>
+void cuda_benchmark3(benchmark::State& state,
+  Kokkos::extents<IndexType, Exts...> exts)
+{
+  return submdspan_benchmark::benchmark3(submdspan_benchmark::cuda_execution_space{}, state, exts);
+}
+
+BENCHMARK_CAPTURE(cuda_benchmark3, int_6d, (Kokkos::extents<int, 2, 2, 2, 2, 2, 2>{}));
+BENCHMARK_CAPTURE(cuda_benchmark3, int_6d, (Kokkos::dextents<int, 6>{2, 2, 2, 2, 2, 2}));
+BENCHMARK_CAPTURE(cuda_benchmark3, size_t_6d, (Kokkos::extents<size_t, 2, 2, 2, 2, 2, 2>{}));
+BENCHMARK_CAPTURE(cuda_benchmark3, size_t_6d, (Kokkos::dextents<size_t, 6>{2, 2, 2, 2, 2, 2}));
 
 BENCHMARK_MAIN();
 

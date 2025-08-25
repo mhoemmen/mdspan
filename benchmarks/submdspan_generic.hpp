@@ -28,6 +28,10 @@
 #include <sstream>
 #include <stdexcept>
 
+#if defined(__CUDACC__)
+#  include <cuda/std/tuple>
+#endif
+
 namespace submdspan_benchmark {
 
 #if defined(MDSPAN_CONSTANT_WRAPPER_WORKAROUND)
@@ -310,20 +314,20 @@ constexpr MDSPAN_FUNCTION auto slice_one_extent(
 template<size_t Ext, class IndexType>
 constexpr MDSPAN_INLINE_FUNCTION auto
 make_unit_stride_slice(IndexType ext) {
-#if defined(__CUDA_ARCH__)
-  using cuda::std::pair;
+#if defined(__CUDACC__)
+  using cuda::std::tuple;
   using cuda::std::integral_constant;
 #else
-  using std::pair;
+  using std::tuple;
   using std::integral_constant;
 #endif
   using index_type = std::remove_cvref_t<IndexType>;
 
   if constexpr (Ext == Kokkos::dynamic_extent) {
-    return pair<index_type, index_type>(0, ext);
+    return tuple<index_type, index_type>(0, ext);
   }
   else {
-    return pair{
+    return tuple{
       integral_constant<IndexType, 0>{},
       integral_constant<IndexType, Ext>{}
     };
@@ -460,8 +464,10 @@ MDSPAN_INLINE_FUNCTION void
 benchmark3_loop(ExecutionSpace exec_space,
   Kokkos::mdspan<std::uint8_t, Kokkos::extents<IndexType, Exts...>, Layout> out)
 {
+#if defined(MDSPAN_ENABLE_P3663)  
   static_assert(std::is_same_v<Layout, Kokkos::layout_right> ||
     is_layout_right_padded_v<Layout>);
+#endif
   using mdspan_type = Kokkos::mdspan<std::uint8_t,
     Kokkos::extents<IndexType, Exts...>, Layout>;
 

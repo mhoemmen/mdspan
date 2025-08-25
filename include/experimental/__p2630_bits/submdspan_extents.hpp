@@ -22,6 +22,10 @@
 #include "strided_slice.hpp"
 #include "../__p0009_bits/utility.hpp"
 
+#if defined(__CUDACC__)
+#  include <cuda/std/tuple>
+#endif
+
 namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
 namespace detail {
 
@@ -137,6 +141,16 @@ struct index_pair_like<std::tuple<IdxT1, IdxT2>, IndexType> {
   static constexpr bool value = std::is_convertible_v<IdxT1, IndexType> &&
                                 std::is_convertible_v<IdxT2, IndexType>;
 };
+
+#if defined(__CUDACC__)
+
+template <class IdxT1, class IdxT2, class IndexType>
+struct index_pair_like<cuda::std::tuple<IdxT1, IdxT2>, IndexType> {
+  static constexpr bool value = std::is_convertible_v<IdxT1, IndexType> &&
+                                std::is_convertible_v<IdxT2, IndexType>;
+};
+  
+#endif
 
 template <class IdxT1, class IdxT2, class IndexType>
 struct index_pair_like<tuple<IdxT1, IdxT2>, IndexType> {
