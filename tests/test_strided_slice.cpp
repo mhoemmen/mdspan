@@ -51,7 +51,10 @@ template<std::integral T, T Value>
 struct my_integral_constant {
   static constexpr T value = Value;
   constexpr operator T () const { return value; }
-#if defined(__cpp_static_call_operator)
+  // Clang 21 in c++20 mode weirdly defines __cpp_static_call_operator
+  // even though __cplusplus < 202302L, and then complains with an
+  // error.
+#if defined(__cpp_static_call_operator) && (__cplusplus >= 202302L)
   static constexpr T operator() () { return value; }
 #endif
 };

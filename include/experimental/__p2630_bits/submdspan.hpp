@@ -29,7 +29,11 @@ submdspan(const mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy> &src,
 
 #if defined(MDSPAN_ENABLE_P3663)
 
-#  if defined(__cpp_structured_bindings) && (__cpp_structured_bindings >= 202411L)
+  // Clang 21 in c++20 mode weirdly defines __cpp_structured_bindings
+  // >= 202411L even though __cplusplus < 202302L, and then complains
+  // with an error when code attempts to make a structured binding
+  // introduce a pack.
+#  if defined(__cpp_structured_bindings) && (__cpp_structured_bindings >= 202411L) && (__cplusplus >= 202302L)
   // Rely on P1061R10, "Structured bindings can introduce a pack."
   // Clang 21 implements this, but GCC 15 does not.
 

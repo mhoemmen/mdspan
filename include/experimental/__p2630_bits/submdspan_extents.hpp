@@ -852,7 +852,9 @@ template<size_t k, class S_k, class IndexType, size_t... Exts>
   constexpr check_static_bounds_result check_static_bounds(
     const extents<IndexType, Exts...>&)
 {
-#if defined(__cpp_pack_indexing)
+  // Clang 21 in c++20 mode weirdly defines __cpp_pack_indexing even
+  // though __cplusplus < 202302L, and then complains with an error.
+#if defined(__cpp_pack_indexing) && (__cplusplus >= 202302L)
   constexpr size_t Exts_k = Exts...[k];
 #else
   constexpr size_t Exts_k = [] () {
